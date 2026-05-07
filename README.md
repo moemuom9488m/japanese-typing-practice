@@ -1,4 +1,5 @@
 # 🇯🇵 日文課打字練習系統 - 運作與維護手冊
+demo影片:https://youtu.be/kcAQxJzotYs
 
 本專案已全面 Docker 化，你可以輕鬆地透過 Docker 進行開發與部署。為了方便管理，我們推薦使用專用的 Jupyter Notebook (`.ipynb`) 來作為控制台。
 
