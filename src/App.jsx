@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, Settings, X, RefreshCw, LogOut, Maximize, Minimize } from 'lucide-react';
-import { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES } from './data.js';
+import { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES, API_MODELS } from './data.js';
 
 // API key will be managed via state and localStorage in App component
 
@@ -117,10 +117,14 @@ export default function App() {
   const [screen, setScreen] = useState('home'); 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
+  const [textModel, setTextModel] = useState(() => localStorage.getItem('geminiTextModel') || API_MODELS.text[0].id);
+  const [ttsModel, setTtsModel] = useState(() => localStorage.getItem('geminiTtsModel') || API_MODELS.tts[0].id);
 
   useEffect(() => {
     localStorage.setItem('geminiApiKey', apiKey);
-  }, [apiKey]);
+    localStorage.setItem('geminiTextModel', textModel);
+    localStorage.setItem('geminiTtsModel', ttsModel);
+  }, [apiKey, textModel, ttsModel]);
   
   const [appSettings, setAppSettings] = useState({
     fontSize: 24, 
@@ -286,13 +290,13 @@ export default function App() {
 
   const playAudio = async (text) => {
     if (!apiKey) {
-      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key");
+      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key (可至 Google AI Studio 免費申請)");
       setTimeout(() => setToastMsg(''), 4000);
       return;
     }
     setIsTtsLoading(true);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${ttsModel}:generateContent?key=${apiKey}`;
       const payload = {
         contents: [{ parts: [{ text: `Say in a clear, natural Japanese accent: ${text}` }] }],
         generationConfig: {
@@ -315,13 +319,13 @@ export default function App() {
   const fetchAIInsights = async () => {
     if (!currentQuestion || aiData || isAiLoading) return;
     if (!apiKey) {
-      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key");
+      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key (可至 Google AI Studio 免費申請)");
       setTimeout(() => setToastMsg(''), 4000);
       return;
     }
     setIsAiLoading(true);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`;
       const prompt = `你是一個專業的日文老師。請針對這個日文內容：'${currentQuestion.ja[0]}' (${currentQuestion.zh})，提供：1. 簡短的語感、用法解析或背誦提示（50字以內）。2. 兩個實用的生活例句。`;
       const payload = {
         contents: [{ parts: [{ text: prompt }] }],
@@ -351,7 +355,7 @@ export default function App() {
     }
     setIsAiGenerating(true);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`;
       const payload = {
         contents: [{ parts: [{ text: `你是一位專業的日語教師。請為學生產生一組關於情境：「${themeInput}」的日文打字測驗，共 8 題。程度適合 N5~N4 初學者，混合單字與實用短句。` }] }],
         generationConfig: {
@@ -410,7 +414,28 @@ export default function App() {
               className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm" 
               placeholder="輸入您的 API Key..." 
             />
-            <p className="text-xs text-gray-400 mt-2">*金鑰僅保存在您的本機瀏覽器，不會上傳至任何伺服器。</p>
+            <p className="text-xs text-gray-400 mt-2">
+              *金鑰僅保存在您的本機瀏覽器，不會上傳至任何伺服器。<br/>
+              *若無金鑰，請至 <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" className="text-emerald-500 underline">Google AI Studio</a> 免費註冊生成。
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">文字模型 (解析與測驗生成)</label>
+            <select value={textModel} onChange={(e) => setTextModel(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
+              {API_MODELS.text.map(model => (
+                <option key={model.id} value={model.id}>{model.label} (額度: {model.limitStr})</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">語音模型 (發音朗讀)</label>
+            <select value={ttsModel} onChange={(e) => setTtsModel(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
+              {API_MODELS.tts.map(model => (
+                <option key={model.id} value={model.id}>{model.label} (額度: {model.limitStr})</option>
+              ))}
+            </select>
           </div>
 
           <div>
