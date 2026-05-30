@@ -540,6 +540,24 @@ export default function App() {
               </button>
             </div>
           </div>
+
+          {/* YouTube Demo Video */}
+          <div className="w-full max-w-3xl bg-white/5 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl text-center">
+            <h3 className="text-xl sm:text-2xl font-bold mb-6 flex items-center justify-center gap-2 text-white">
+              <Play className="text-emerald-400" fill="currentColor" size={24} /> 系統操作示範
+            </h3>
+            <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl bg-black/20">
+              <iframe 
+                className="absolute top-0 left-0 w-full h-full"
+                src="https://www.youtube.com/embed/kcAQxJzotYs" 
+                title="日文打字系統-demo" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                referrerPolicy="strict-origin-when-cross-origin" 
+                allowFullScreen>
+              </iframe>
+            </div>
+          </div>
         </div>
       )}
 
