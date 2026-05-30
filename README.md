@@ -1,6 +1,9 @@
 # 🇯🇵 日文課打字練習系統 - 運作與維護手冊
 demo影片:https://youtu.be/kcAQxJzotYs
 
+> **🎉 本專案已成功部署至線上！**
+> 點擊此處立即體驗免安裝的網頁版：[https://moemuom9488m.github.io/japanese-typing-practice/](https://moemuom9488m.github.io/japanese-typing-practice/)
+
 本專案已全面 Docker 化，你可以輕鬆地透過 Docker 進行開發與部署。為了方便管理，我們推薦使用專用的 Jupyter Notebook (`.ipynb`) 來作為控制台。
 
 ## 🚀 快速啟動 (使用 Jupyter Notebook)
