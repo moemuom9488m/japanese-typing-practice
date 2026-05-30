@@ -321,7 +321,7 @@ export default function App() {
     }
     setIsAiLoading(true);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
       const prompt = `你是一個專業的日文老師。請針對這個日文內容：'${currentQuestion.ja[0]}' (${currentQuestion.zh})，提供：1. 簡短的語感、用法解析或背誦提示（50字以內）。2. 兩個實用的生活例句。`;
       const payload = {
         contents: [{ parts: [{ text: prompt }] }],
@@ -351,7 +351,7 @@ export default function App() {
     }
     setIsAiGenerating(true);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
       const payload = {
         contents: [{ parts: [{ text: `你是一位專業的日語教師。請為學生產生一組關於情境：「${themeInput}」的日文打字測驗，共 8 題。程度適合 N5~N4 初學者，混合單字與實用短句。` }] }],
         generationConfig: {
