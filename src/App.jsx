@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, Settings, X, RefreshCw, LogOut, Maximize, Minimize } from 'lucide-react';
 import { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES } from './data.js';
 
-const apiKey = "";
+// API key will be managed via state and localStorage in App component
 
 const getHiraganaVersion = (text) => {
   if (!text) return '';
@@ -116,6 +116,11 @@ const shuffleArray = (array) => {
 export default function App() {
   const [screen, setScreen] = useState('home'); 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
+
+  useEffect(() => {
+    localStorage.setItem('geminiApiKey', apiKey);
+  }, [apiKey]);
   
   const [appSettings, setAppSettings] = useState({
     fontSize: 24, 
@@ -280,6 +285,11 @@ export default function App() {
   };
 
   const playAudio = async (text) => {
+    if (!apiKey) {
+      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key");
+      setTimeout(() => setToastMsg(''), 4000);
+      return;
+    }
     setIsTtsLoading(true);
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
@@ -304,6 +314,11 @@ export default function App() {
 
   const fetchAIInsights = async () => {
     if (!currentQuestion || aiData || isAiLoading) return;
+    if (!apiKey) {
+      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key");
+      setTimeout(() => setToastMsg(''), 4000);
+      return;
+    }
     setIsAiLoading(true);
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
@@ -329,6 +344,11 @@ export default function App() {
 
   const handleGenerateAiQuiz = async () => {
     if (!themeInput.trim()) return;
+    if (!apiKey) {
+      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key");
+      setTimeout(() => setToastMsg(''), 4000);
+      return;
+    }
     setIsAiGenerating(true);
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
@@ -378,6 +398,21 @@ export default function App() {
         <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Settings size={20} /> 介面設定</h3>
         
         <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center justify-between">
+              <span>Gemini API Key</span>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-emerald-500 hover:underline text-xs">取得金鑰</a>
+            </label>
+            <input 
+              type="password" 
+              value={apiKey} 
+              onChange={(e) => setApiKey(e.target.value)} 
+              className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm" 
+              placeholder="輸入您的 API Key..." 
+            />
+            <p className="text-xs text-gray-400 mt-2">*金鑰僅保存在您的本機瀏覽器，不會上傳至任何伺服器。</p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">字體大小 ({appSettings.fontSize}px)</label>
             <input type="range" min="16" max="48" step="2" value={appSettings.fontSize} onChange={(e) => setAppSettings(s => ({ ...s, fontSize: Number(e.target.value) }))} className="w-full accent-emerald-500" />
