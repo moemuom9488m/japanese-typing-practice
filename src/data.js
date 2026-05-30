@@ -887,4 +887,16 @@ const PRACTICE_TYPES = [
   { id: 'sentence', name: '句型翻譯' }
 ];
 
-export { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES };
+const API_MODELS = {
+  text: [
+    { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', limitStr: '500 次/天' },
+    { id: 'gemini-2.5-flash-preview-09-2025', label: 'Gemini 2.5 Flash', limitStr: '20 次/天' },
+    { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', limitStr: '20 次/天' }
+  ],
+  tts: [
+    { id: 'gemini-3.1-flash-tts', label: 'Gemini 3.1 Flash TTS', limitStr: '10 次/天' },
+    { id: 'gemini-2.5-flash-preview-tts', label: 'Gemini 2.5 Flash TTS', limitStr: '10 次/天' }
+  ]
+};
+
+export { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES, API_MODELS };
