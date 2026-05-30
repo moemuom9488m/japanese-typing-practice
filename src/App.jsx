@@ -460,8 +460,8 @@ export default function App() {
       )}
 
       {screen === 'home' && (
-        <div className="w-full max-w-3xl flex flex-col items-center justify-center min-h-[80vh] animate-in fade-in zoom-in-95 duration-500 relative z-10">
-          <div className="bg-white/10 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-2xl border border-white/20 w-full text-center relative overflow-hidden">
+        <div className="w-full max-w-4xl flex flex-col items-center justify-center min-h-[80vh] animate-in fade-in zoom-in-95 duration-500 relative z-10 gap-12 py-10">
+          <div className="bg-white/10 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-2xl border border-white/20 w-full max-w-3xl text-center relative overflow-hidden">
             <button onClick={() => setIsSettingsOpen(true)} className="absolute right-6 top-6 p-2 rounded-full hover:bg-white/20 transition-colors"><Settings size={24} /></button>
             <div className="w-20 h-20 bg-emerald-400 text-white rounded-2xl mx-auto flex items-center justify-center mb-6 rotate-3 shadow-lg"><BookOpen size={40} /></div>
             <h1 className="text-3xl sm:text-5xl font-extrabold mb-3 tracking-tight">日語打字練習系統</h1>
