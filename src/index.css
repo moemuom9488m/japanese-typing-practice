@@ -29,6 +29,18 @@
       transform: translate(0, 0) scale(1);
     }
   }
+
+  @keyframes sway {
+    0%, 100% {
+      transform: rotate(-10deg);
+    }
+    50% {
+      transform: rotate(10deg);
+    }
+  }
+  .animate-sway {
+    animation: sway 4s ease-in-out infinite;
+  }
 }
 
 .custom-scrollbar::-webkit-scrollbar {
