@@ -88,6 +88,7 @@ docker compose down
 ## ⚠️ 注意事項
 *   修改 `src/data.js` 後，Vite 會自動熱更新，無需重新啟動 Docker。
 *   若修改了 `package.json` 的依賴項，請執行 `docker compose up --build` 重新編譯鏡像。
+*   **線上版本 (GitHub Pages) 不會自動更新**：若要將本機最新的修改推送到線上版本（即更新 `gh-pages` 分支），請手動在終端機執行 `npm run deploy` 進行建置與發布。
 
 ---
 
