@@ -718,6 +718,63 @@ const playAudio = async (text) => {
               </tbody>
             </table>
           </div>
+
+          <div className="mt-6 bg-rose-50 border border-rose-200 rounded-xl p-6 text-sm text-gray-700">
+            <h4 className="text-rose-800 font-bold text-lg mb-2">📖 日語動詞活用形說明</h4>
+            <p className="mb-4 leading-relaxed">
+              「未然、連用、終止、連體、假定、命令」是日語文法中動詞、形容詞的活用形（變化型態），用來連接不同的助詞、助動詞或結尾。透過這些變化，詞彙能表達否定、過去、假設等語意。
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
+                <thead className="bg-rose-100/50">
+                  <tr>
+                    <th className="p-3 border-b border-rose-100 font-semibold whitespace-nowrap">變化形式</th>
+                    <th className="p-3 border-b border-rose-100 font-semibold min-w-[200px]">主要功能與意義</th>
+                    <th className="p-3 border-b border-rose-100 font-semibold">常見接續的平假名</th>
+                    <th className="p-3 border-b border-rose-100 font-semibold whitespace-nowrap">實例 (以「書く」為例)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-rose-50">
+                  <tr className="hover:bg-rose-50/50">
+                    <td className="p-3 font-bold text-rose-700">未然形</td>
+                    <td className="p-3">尚未發生。用於否定、意志、被動、使役。</td>
+                    <td className="p-3 font-mono text-emerald-600">ない、う、せる、られる</td>
+                    <td className="p-3">書かない、書こう</td>
+                  </tr>
+                  <tr className="hover:bg-rose-50/50">
+                    <td className="p-3 font-bold text-rose-700">連用形</td>
+                    <td className="p-3">連接其他用言或助詞。用於過去式、肯定中止。</td>
+                    <td className="p-3 font-mono text-emerald-600">ます、て、た</td>
+                    <td className="p-3">書きます、書いて</td>
+                  </tr>
+                  <tr className="hover:bg-rose-50/50">
+                    <td className="p-3 font-bold text-rose-700">終止形</td>
+                    <td className="p-3">結束句子。為字典中的基本型態（辭書形）。</td>
+                    <td className="p-3 font-mono text-emerald-600">句尾、終助詞</td>
+                    <td className="p-3">書く</td>
+                  </tr>
+                  <tr className="hover:bg-rose-50/50">
+                    <td className="p-3 font-bold text-rose-700">連體形</td>
+                    <td className="p-3">連接「體言」（名詞），用來修飾名詞。</td>
+                    <td className="p-3 font-mono text-emerald-600">とき、もの、こと</td>
+                    <td className="p-3">書くとき</td>
+                  </tr>
+                  <tr className="hover:bg-rose-50/50">
+                    <td className="p-3 font-bold text-rose-700">假定形</td>
+                    <td className="p-3">表示條件或假設（如果～的話）。</td>
+                    <td className="p-3 font-mono text-emerald-600">ば</td>
+                    <td className="p-3">書けば</td>
+                  </tr>
+                  <tr className="hover:bg-rose-50/50">
+                    <td className="p-3 font-bold text-rose-700">命令形</td>
+                    <td className="p-3">直接下達命令（快點～）。</td>
+                    <td className="p-3 font-mono text-emerald-600">句尾</td>
+                    <td className="p-3">書け</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -837,7 +894,7 @@ const playAudio = async (text) => {
       {import.meta.env.DEV && (
         <div className="fixed top-0 left-0 w-full bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-mono py-1.5 px-4 text-center z-50 flex justify-between shadow-sm">
           <span className="font-bold flex items-center gap-2">🛠️ Local Development Server</span>
-          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞填表測驗 (v1.4.0)</span>
+          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞六大活用形說明 (v1.4.1)</span>
         </div>
       )}
       <div
