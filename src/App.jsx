@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { pipeline, env } from '@xenova/transformers';
-import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, BookText, Settings, X, RefreshCw, LogOut, Maximize, Minimize, Search } from 'lucide-react';
+import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, BookText, Pencil, Settings, X, RefreshCw, LogOut, Maximize, Minimize, Search } from 'lucide-react';
 import quizEmbeddingsData from './data/quiz_with_embeddings.json';
 import { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES, API_MODELS } from './data.js';
 
@@ -150,6 +150,10 @@ export default function App() {
   });
   const [ttsVoice, setTtsVoice] = useState(() => localStorage.getItem('geminiTtsVoice') || 'Aoede');
 
+  const [verbQuizList, setVerbQuizList] = useState([]);
+  const [verbQuizIndex, setVerbQuizIndex] = useState(0);
+  const [verbQuizInputs, setVerbQuizInputs] = useState({});
+  const [verbQuizResults, setVerbQuizResults] = useState(null);
   const [isVerbTableOpen, setIsVerbTableOpen] = useState(false);
   const [verbSearchQuery, setVerbSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -308,6 +312,7 @@ export default function App() {
     }
 
     setQuestions(newQuestions);
+    setVerbQuizList([]);
     setCurrentIndex(0);
     setUserInput('');
     setScore(0);
@@ -372,7 +377,57 @@ export default function App() {
     }
   };
 
-  const playAudio = async (text) => {
+  
+  const startVerbTableQuiz = () => {
+    const validVerbs = verbTableData.filter(v => Object.keys(v.forms).length > 3);
+    const shuffled = shuffleArray(validVerbs).slice(0, 5);
+    setVerbQuizList(shuffled);
+    setVerbQuizIndex(0);
+    setVerbQuizInputs({});
+    setVerbQuizResults(null);
+    setScore(0);
+    setQuestions([]);
+    setScreen('verb_table_quiz');
+  };
+
+  const checkVerbTable = () => {
+    const currentVerb = verbQuizList[verbQuizIndex];
+    if (!currentVerb) return;
+
+    const results = {};
+    let allCorrect = true;
+    const formKeysToTest = ['ます形', 'て形', 'た形', 'ない形', 'ば形', '意向形', '命令形'].filter(k => currentVerb.forms[k]);
+    const normalizeStr = (str) => str.replace(/[\s　。、？！?!]/g, '');
+
+    formKeysToTest.forEach(formKey => {
+      const targetAns = currentVerb.forms[formKey];
+      const hiraTarget = getHiraganaVersion(targetAns);
+      const expandedAnswers = new Set([normalizeStr(targetAns), normalizeStr(hiraTarget)]);
+      
+      const userInput = verbQuizInputs[formKey] || '';
+      const isCorrect = Array.from(expandedAnswers).some(ans => ans === normalizeStr(userInput));
+      
+      results[formKey] = isCorrect;
+      if (!isCorrect) allCorrect = false;
+    });
+
+    setVerbQuizResults(results);
+    if (allCorrect) {
+      setScore(s => s + 1);
+    }
+  };
+
+  const nextVerbQuiz = () => {
+    if (verbQuizIndex < verbQuizList.length - 1) {
+      setVerbQuizIndex(i => i + 1);
+      setVerbQuizInputs({});
+      setVerbQuizResults(null);
+    } else {
+      setScreen('result');
+    }
+  };
+
+const playAudio = async (text) => {
     if (!apiKey) {
       setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key (可至 Google AI Studio 免費申請)");
       setTimeout(() => setToastMsg(''), 4000);
@@ -782,7 +837,7 @@ export default function App() {
       {import.meta.env.DEV && (
         <div className="fixed top-0 left-0 w-full bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-mono py-1.5 px-4 text-center z-50 flex justify-between shadow-sm">
           <span className="font-bold flex items-center gap-2">🛠️ Local Development Server</span>
-          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞查表字典 (v1.3.0)</span>
+          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞填表測驗 (v1.4.0)</span>
         </div>
       )}
       <div
@@ -914,7 +969,7 @@ export default function App() {
             <div className="w-20 h-20 bg-emerald-400 text-white rounded-2xl mx-auto flex items-center justify-center mb-6 animate-sway shadow-lg"><BookOpen size={40} /></div>
             <h1 className="text-3xl sm:text-5xl font-extrabold mb-3 tracking-tight">日語打字練習系統</h1>
             <p className="font-medium mb-10 text-lg opacity-80">由 Google AI 開發的日語筆記特訓，從單字到句型完全制霸</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
               <button onClick={() => setScreen('config')} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-emerald-100 hover:border-emerald-400 rounded-2xl transition-all hover:-translate-y-1 text-gray-800">
                 <Play className="text-emerald-500 mb-3 group-hover:scale-110 transition-transform" size={32} />
                 <h3 className="text-xl font-bold text-emerald-800 mb-1">開始自訂測驗</h3>
@@ -937,6 +992,12 @@ export default function App() {
                 <BookText className="text-rose-500 mb-3 group-hover:scale-110 transition-transform duration-300 relative z-10" size={32} />
                 <h3 className="text-xl font-bold text-rose-800 mb-1 relative z-10">📖 動詞變化字典</h3>
                 <p className="text-rose-600/80 text-sm relative z-10">查閱動詞的所有變化型態</p>
+              </button>
+              <button onClick={() => startVerbTableQuiz()} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-orange-100 hover:border-orange-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-50 opacity-50 pointer-events-none"></div>
+                <Pencil className="text-orange-500 mb-3 group-hover:scale-110 transition-transform duration-300 relative z-10" size={32} />
+                <h3 className="text-xl font-bold text-orange-800 mb-1 relative z-10">📝 動詞變化填表</h3>
+                <p className="text-orange-600/80 text-sm relative z-10">挑戰填滿整張動詞變化表</p>
               </button>
             </div>
           </div>
@@ -1002,7 +1063,7 @@ export default function App() {
             <button onClick={() => setShowQuitConfirm(true)} className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-red-500 transition-colors"><LogOut size={16} /> 退出測驗</button>
             <div className="font-bold bg-gray-100 px-4 py-1.5 rounded-full text-sm tracking-widest flex items-center gap-2">
               {currentQuestion.chapter === 'AI' && <Sparkles size={14} className="text-purple-500" />}
-              {currentIndex + 1} / {questions.length}
+              {currentIndex + 1} / {verbQuizList.length > 0 ? verbQuizList.length : questions.length}
             </div>
             <button onClick={() => setShowHint(!showHint)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${showHint ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {showHint ? <Eye size={16} /> : <EyeOff size={16} />}
@@ -1067,12 +1128,88 @@ export default function App() {
         </div>
       )}
 
-      {screen === 'result' && (
+      
+      {screen === 'verb_table_quiz' && verbQuizList.length > 0 && (() => {
+        const currentVerb = verbQuizList[verbQuizIndex];
+        const formKeysToTest = ['ます形', 'て形', 'た形', 'ない形', 'ば形', '意向形', '命令形'].filter(k => currentVerb.forms[k]);
+        
+        return (
+          <div className="w-full max-w-4xl bg-white/95 backdrop-blur-md rounded-3xl shadow-xl border border-white/20 p-6 sm:p-10 animate-in fade-in slide-in-from-bottom-4 relative z-10" style={{ color: '#1f2937' }}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2 text-orange-600"><Pencil size={24} /> 動詞變化填表測驗</h2>
+                <p className="text-gray-500 mt-1">請填入對應的變化（輸入平假名亦可直接送出）</p>
+              </div>
+              <div className="flex gap-4 items-center">
+                <div className="text-lg font-bold text-gray-500 bg-gray-100 px-4 py-1.5 rounded-full border border-gray-200 shadow-inner">
+                  進度：<span className="text-orange-500">{verbQuizIndex + 1} / {verbQuizList.length}</span>
+                </div>
+                <button onClick={() => setShowQuitConfirm(true)} className="p-2 bg-gray-100 hover:bg-red-100 hover:text-red-600 text-gray-500 rounded-xl transition-colors"><X size={20} /></button>
+              </div>
+            </div>
+
+            <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-6 mb-8 text-center shadow-sm relative overflow-hidden flex flex-col sm:flex-row justify-center items-center gap-8">
+              <div>
+                <div className="text-orange-800/60 font-semibold mb-1 text-sm tracking-widest">中文意思</div>
+                <div className="text-2xl sm:text-3xl font-bold text-orange-900">{currentVerb.zh}</div>
+              </div>
+              <div className="hidden sm:block w-px h-12 bg-orange-200"></div>
+              <div>
+                <div className="text-orange-800/60 font-semibold mb-1 text-sm tracking-widest">原形</div>
+                <div className="text-2xl sm:text-3xl text-orange-700 font-bold">{currentVerb.forms['原形'] || currentVerb.baseJa}</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+              {formKeysToTest.map((formKey, idx) => {
+                const isCorrect = verbQuizResults ? verbQuizResults[formKey] : null;
+                const correctAns = currentVerb.forms[formKey];
+                const hiraAns = getHiraganaVersion(correctAns);
+                return (
+                  <div key={formKey} className={`p-4 rounded-xl border-2 transition-all ${verbQuizResults ? (isCorrect ? 'bg-emerald-50 border-emerald-300' : 'bg-red-50 border-red-300') : 'bg-white border-gray-200 focus-within:border-orange-400 focus-within:ring-4 focus-within:ring-orange-500/10'}`}>
+                    <label className="block text-sm font-bold text-gray-600 mb-2">{formKey}</label>
+                    <input 
+                      type="text" 
+                      value={verbQuizInputs[formKey] || ''} 
+                      onChange={(e) => setVerbQuizInputs(prev => ({...prev, [formKey]: e.target.value}))}
+                      disabled={verbQuizResults !== null}
+                      placeholder={hiraAns}
+                      className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium text-lg disabled:bg-transparent disabled:border-transparent disabled:px-0 text-gray-800"
+                    />
+                    {verbQuizResults !== null && (
+                      <div className="mt-2 text-sm font-bold flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
+                        {isCorrect ? (
+                          <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 size={16} /> 正確！</span>
+                        ) : (
+                          <span className="text-red-500 flex items-center gap-1 flex-wrap"><XCircle size={16} className="shrink-0" /> <span className="text-xs">解答: {correctAns} ({hiraAns})</span></span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-center">
+              {verbQuizResults === null ? (
+                <button onClick={checkVerbTable} disabled={formKeysToTest.every(k => !(verbQuizInputs[k] || '').trim())} className="px-10 py-4 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl font-bold text-xl shadow-lg shadow-orange-200 transition-transform active:scale-95 flex items-center gap-2">
+                  <CheckCircle2 size={24} /> 檢查答案
+                </button>
+              ) : (
+                <button onClick={nextVerbQuiz} className="px-10 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xl shadow-lg shadow-emerald-200 transition-transform active:scale-95 flex items-center gap-2 animate-bounce">
+                  {verbQuizIndex < verbQuizList.length - 1 ? "下一題" : "查看成績"} <ChevronRight size={24} />
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+{screen === 'result' && (
         <div className="w-full max-w-2xl bg-white/95 backdrop-blur-md rounded-3xl shadow-xl overflow-hidden border border-white/20 animate-in fade-in slide-in-from-bottom-4 relative z-10" style={{ color: '#1f2937' }}>
           <div className={`p-8 sm:p-12 text-center text-white ${currentCustomQuiz ? 'bg-purple-600' : 'bg-emerald-500'}`}>
             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm"><CheckCircle2 size={48} className="text-white" /></div>
             <h2 className="text-3xl font-bold mb-2">測驗完成！</h2>
-            <div className="text-5xl font-black mt-6 tracking-tighter">{score} <span className={`text-2xl ${currentCustomQuiz ? 'text-purple-200' : 'text-emerald-200'}`}>/ {questions.length}</span></div>
+            <div className="text-5xl font-black mt-6 tracking-tighter">{score} <span className={`text-2xl ${currentCustomQuiz ? 'text-purple-200' : 'text-emerald-200'}`}>/ {verbQuizList.length > 0 ? verbQuizList.length : questions.length}</span></div>
             <p className={`mt-2 font-medium ${currentCustomQuiz ? 'text-purple-100' : 'text-emerald-100'}`}>總體正確率: {Math.round((score / questions.length) * 100)}%</p>
           </div>
           <div className="p-6 sm:p-8">
