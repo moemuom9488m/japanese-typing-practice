@@ -775,6 +775,108 @@ const playAudio = async (text) => {
               </table>
             </div>
           </div>
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6 text-sm text-gray-700">
+            <h4 className="text-blue-800 font-bold text-lg mb-2">💡 核心詞性與活用類別 (カ變、サ變、形容詞、名詞)</h4>
+            <p className="mb-4 leading-relaxed">
+              除了常見的動詞（五段、上一段、下一段）外，日語中還有以下幾種核心的詞性與活用類別，它們在接續六大活用形時有著不同的變化規則：
+            </p>
+            <div className="grid sm:grid-cols-3 gap-4 mb-4">
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-100">
+                <span className="font-bold text-blue-700 block mb-1">1. 不規則動詞</span>
+                <ul className="list-disc list-inside text-xs space-y-1 text-gray-600">
+                  <li><span className="font-semibold text-gray-800">カ變動詞</span>：全日語只有「来る（くる）」一個詞。</li>
+                  <li><span className="font-semibold text-gray-800">サ變動詞</span>：以「する」結尾的動詞（如：勉強する）。</li>
+                </ul>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-100">
+                <span className="font-bold text-blue-700 block mb-1">2. 形容詞</span>
+                <ul className="list-disc list-inside text-xs space-y-1 text-gray-600">
+                  <li><span className="font-semibold text-gray-800">い形容詞</span>：語尾為「い」（如：高い）。</li>
+                  <li><span className="font-semibold text-gray-800">な形容詞</span>：修飾名詞時加「な」，語尾常接「だ/です」（如：綺麗な）。</li>
+                </ul>
+              </div>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-100">
+                <span className="font-bold text-blue-700 block mb-1">3. 名詞</span>
+                <ul className="list-disc list-inside text-xs space-y-1 text-gray-600">
+                  <li>名詞本身不變化，但接續助動詞（如 だ）時的變化與「な形容詞」高度相似。</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full text-left border-collapse bg-white rounded-lg overflow-hidden shadow-sm text-xs">
+                <thead className="bg-blue-100/50">
+                  <tr>
+                    <th className="p-3 border-b border-blue-100 font-semibold whitespace-nowrap">活用形</th>
+                    <th className="p-3 border-b border-blue-100 font-semibold text-emerald-700">カ變 (来る)</th>
+                    <th className="p-3 border-b border-blue-100 font-semibold text-indigo-700">サ變 (する)</th>
+                    <th className="p-3 border-b border-blue-100 font-semibold text-orange-700">い形容詞 (高い)</th>
+                    <th className="p-3 border-b border-blue-100 font-semibold text-purple-700">な形容詞 (綺麗)</th>
+                    <th className="p-3 border-b border-blue-100 font-semibold text-rose-700">名詞 (學生)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-blue-50">
+                  <tr className="hover:bg-blue-50/50">
+                    <td className="p-3 font-bold text-blue-700">未然形</td>
+                    <td className="p-3">こ(ない)<br/>こよ(う)</td>
+                    <td className="p-3">し(ない) / さ(れる)<br/>せ(ず)</td>
+                    <td className="p-3">高かろ(う)</td>
+                    <td className="p-3">綺麗だろ(う)</td>
+                    <td className="p-3">學生だろ(う)</td>
+                  </tr>
+                  <tr className="hover:bg-blue-50/50">
+                    <td className="p-3 font-bold text-blue-700">連用形</td>
+                    <td className="p-3">き(ます)<br/>き(て / た)</td>
+                    <td className="p-3">し(ます)<br/>し(て / た)</td>
+                    <td className="p-3">高く(なる)<br/>高かっ(た)</td>
+                    <td className="p-3">綺麗で / 綺麗に<br/>綺麗だっ(た)</td>
+                    <td className="p-3">學生で / 學生に<br/>學生だっ(た)</td>
+                  </tr>
+                  <tr className="hover:bg-blue-50/50">
+                    <td className="p-3 font-bold text-blue-700">終止形</td>
+                    <td className="p-3">くる</td>
+                    <td className="p-3">する</td>
+                    <td className="p-3">高い</td>
+                    <td className="p-3">綺麗だ</td>
+                    <td className="p-3">學生だ</td>
+                  </tr>
+                  <tr className="hover:bg-blue-50/50">
+                    <td className="p-3 font-bold text-blue-700">連體形</td>
+                    <td className="p-3">くる(とき)</td>
+                    <td className="p-3">する(とき)</td>
+                    <td className="p-3">高い(本)</td>
+                    <td className="p-3">綺麗な(人)</td>
+                    <td className="p-3">學生の(本)<br/>學生な(ので)</td>
+                  </tr>
+                  <tr className="hover:bg-blue-50/50">
+                    <td className="p-3 font-bold text-blue-700">假定形</td>
+                    <td className="p-3">くれ(ば)</td>
+                    <td className="p-3">すれ(ば)</td>
+                    <td className="p-3">高けれ(ば)</td>
+                    <td className="p-3">綺麗なら(ば)</td>
+                    <td className="p-3">學生なら(ば)</td>
+                  </tr>
+                  <tr className="hover:bg-blue-50/50">
+                    <td className="p-3 font-bold text-blue-700">命令形</td>
+                    <td className="p-3">こい</td>
+                    <td className="p-3">しろ / せよ</td>
+                    <td className="p-3 text-gray-400 italic">(無)</td>
+                    <td className="p-3 text-gray-400 italic">(無)</td>
+                    <td className="p-3 text-gray-400 italic">(無)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mt-4 text-xs text-yellow-800">
+              <span className="font-bold flex items-center gap-1 mb-1"><Sparkles size={14} /> 關鍵學習痛點提示：</span>
+              <ol className="list-decimal list-inside space-y-1 ml-1">
+                <li><strong>カ變（来る）的讀音</strong>：未然讀 ko，連用讀 ki，終止/連體讀 kuru，假定讀 kure，命令讀 koi。漢字雖同為「來」，但平假名讀音完全不同，極易混淆。</li>
+                <li><strong>な形容詞與名詞的連體形差異</strong>：修飾名詞時，な形容詞用「な」（綺麗な花）；名詞則用「の」（學生の本）。</li>
+              </ol>
+            </div>
+          </div>
+
         </div>
       </div>
     );
@@ -894,7 +996,7 @@ const playAudio = async (text) => {
       {import.meta.env.DEV && (
         <div className="fixed top-0 left-0 w-full bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-mono py-1.5 px-4 text-center z-50 flex justify-between shadow-sm">
           <span className="font-bold flex items-center gap-2">🛠️ Local Development Server</span>
-          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞六大活用形說明 (v1.4.1)</span>
+          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞各類別活用大表 (v1.4.2)</span>
         </div>
       )}
       <div
