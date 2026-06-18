@@ -58,6 +58,33 @@ docker compose down
 
 ---
 
+## 🔍 智慧語意搜尋 (Vector Database)
+本系統支援基於 **Hugging Face (`Transformers.js`)** 與 **本機 GPU 預運算** 的零伺服器語意搜尋架構。
+
+### 功能展示
+以下是幾張實際在前端無伺服器架構下進行語意搜尋的展示截圖：
+
+<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+  <!-- 請將截圖命名為對應名稱並放入 public/ 目錄下即可 -->
+  <img src="./public/showcase-1.png" width="30%" alt="搜尋展示 1">
+  <img src="./public/showcase-2.png" width="30%" alt="搜尋展示 2">
+  <img src="./public/showcase-3.png" width="30%" alt="搜尋展示 3">
+  <img src="./public/showcase-4.png" width="30%" alt="搜尋展示 4">
+</div>
+
+### 如何生成語意向量？
+若您修改了 `src/data.js` 的題庫，請依序執行以下步驟來更新向量資料庫：
+
+1. **匯出最新題庫**：在終端機執行 `node scripts/export_json.js`，這會在目錄產生 `raw_data.json`。
+2. **啟動本機 GPU 計算**：確保您在具有 CUDA 支援的 Python/Conda 環境 (如 `pytorch` 虛擬環境)，並執行：
+   ```powershell
+   python scripts/generate_embeddings.py
+   ```
+   這會自動下載並使用 `MiniLM-L12-v2` 模型將 `raw_data.json` 轉為 `quiz_with_embeddings.json`。
+3. **完成**：重新啟動或重新整理網頁即可享有最新的語意搜尋功能！
+
+---
+
 ## ⚠️ 注意事項
 *   修改 `src/data.js` 後，Vite 會自動熱更新，無需重新啟動 Docker。
 *   若修改了 `package.json` 的依賴項，請執行 `docker compose up --build` 重新編譯鏡像。

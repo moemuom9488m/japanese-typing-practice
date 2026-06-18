@@ -38,3 +38,10 @@ yarn-error.log*
 
 # Custom
 免費API額度.csv
+GEMINI.md
+raw_data.json
+scripts/__pycache__/
+*.log
+*log.txt
+*output.log
+vite_build_output.txt

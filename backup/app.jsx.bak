@@ -1351,7 +1351,7 @@ export default function App() {
             <button onClick={() => setIsSettingsOpen(true)} className="absolute right-6 top-6 p-2 rounded-full hover:bg-white/20 transition-colors"><Settings size={24} /></button>
             <div className="w-20 h-20 bg-emerald-400 text-white rounded-2xl mx-auto flex items-center justify-center mb-6 rotate-3 shadow-lg"><BookOpen size={40} /></div>
             <h1 className="text-3xl sm:text-5xl font-extrabold mb-3 tracking-tight">日語打字練習系統</h1>
-            <p className="font-medium mb-10 text-lg opacity-80">專屬伊布的日語筆記特訓，從單字到句型完全制霸</p>
+            <p className="font-medium mb-10 text-lg opacity-80">由 Google AI 開發的日語筆記特訓，從單字到句型完全制霸</p>
             <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
               <button onClick={() => setScreen('config')} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-emerald-100 hover:border-emerald-400 rounded-2xl transition-all hover:-translate-y-1 text-gray-800">
                 <Play className="text-emerald-500 mb-3 group-hover:scale-110 transition-transform" size={32} />

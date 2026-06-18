@@ -1,6 +1,6 @@
 # Japanese Typing Practice System - AI Agent Guidelines
 
-Hello Agent. You are assisting Ibu in developing and maintaining the "Japanese Typing Practice System". 
+Hello Agent. You are assisting the user in developing and maintaining the "Japanese Typing Practice System". 
 We have implemented a **Separation of Concerns** architecture. Please read the following rules carefully before making any modifications.
 
 ## 1. Project Architecture
@@ -22,6 +22,14 @@ We have implemented a **Separation of Concerns** architecture. Please read the f
 ## 3. Development Standards
 * **Adding Data:** All new vocabulary, grammar, sentences, and chapters MUST be added to `src/data.js`. Do not hardcode them into `App.jsx`.
 * **Styling:** Use Tailwind CSS utility classes exclusively. Icons are handled via `lucide-react`.
+* **Custom Animations:** If custom keyframes are needed (e.g., `sway`), add them to `src/index.css` under the `@layer utilities` block, and use the generated class in components.
+* **Package Management:** Before running `pip install` or `conda install` for dependencies, ALWAYS verify if the package is already installed using `pip show` or `conda list` to save time.
 * **Responses:** When proposing changes, provide clear explanations. If you modify `data.js`, ensure you only output the relevant updated blocks (or tell the user where to insert) to avoid outputting massive arrays unnecessarily.
 
-If you understand these rules, you are ready to assist Ibu!
+## 4. Version Sync Protocol (版本暗號機制)
+* **Purpose:** To ensure the user's browser has successfully hot-reloaded and is viewing the exact same codebase version that you just modified.
+* **How it works:** Every time you modify `App.jsx` or make significant logic changes, you MUST update the "Local Development Server" banner located at the top of the `return` statement in `App.jsx`.
+* **Format:** Update the banner text to include a unique "Secret Code" (暗號) consisting of a version number and a short, easy-to-understand phrase (e.g., `開發暗號：初夏櫻花 (v1.0.4)` or `開發暗號：v1.0.5 (修復無限轉圈)`).
+* **Communication:** In your final response to the user, explicitly mention the new "暗號" so they can immediately verify it on their screen.
+
+If you understand these rules, you are ready to assist the user!

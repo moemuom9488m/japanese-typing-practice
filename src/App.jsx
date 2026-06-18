@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, Settings, X, RefreshCw, LogOut, Maximize, Minimize } from 'lucide-react';
+import { pipeline, env } from '@xenova/transformers';
+import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, Settings, X, RefreshCw, LogOut, Maximize, Minimize, Search } from 'lucide-react';
+import quizEmbeddingsData from './data/quiz_with_embeddings.json';
 import { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES, API_MODELS } from './data.js';
 
 // API key will be managed via state and localStorage in App component
@@ -31,10 +33,17 @@ const fetchWithRetry = async (url, options, retries = 5) => {
   for (let i = 0; i < retries; i++) {
     try {
       const response = await fetch(url, options);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        const err = new Error(`HTTP error! status: ${response.status}, message: ${errText}`);
+        err.status = response.status;
+        throw err;
+      }
       return await response.json();
     } catch (error) {
-      if (i === retries - 1) throw error;
+      if (i === retries - 1 || (error.status && error.status >= 400 && error.status < 500 && error.status !== 429)) {
+        throw error;
+      }
       await new Promise(res => setTimeout(res, delays[i]));
     }
   }
@@ -55,6 +64,17 @@ function createWavFromPcmBase64(base64Str, sampleRate = 24000) {
   for (let i = 0; i < pcmData.length; i++) view.setInt16(44 + i * 2, pcmData[i], true);
   return new Blob([view], { type: 'audio/wav' });
 }
+
+const cosineSimilarity = (vecA, vecB) => {
+  let dotProduct = 0, normA = 0, normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+};
 
 const ParticleBackground = () => {
   const canvasRef = useRef(null);
@@ -114,22 +134,84 @@ const shuffleArray = (array) => {
 };
 
 export default function App() {
-  const [screen, setScreen] = useState('home'); 
+  const [screen, setScreen] = useState('home');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
-  const [textModel, setTextModel] = useState(() => localStorage.getItem('geminiTextModel') || API_MODELS.text[0].id);
-  const [ttsModel, setTtsModel] = useState(() => localStorage.getItem('geminiTtsModel') || API_MODELS.tts[0].id);
+  const [textModel, setTextModel] = useState(() => {
+    const saved = localStorage.getItem('geminiTextModel');
+    if (saved === 'gemma-4-31b') return 'gemma-4-31b-it';
+    if (saved === 'gemma-4-26b') return 'gemma-4-26b-it';
+    return saved || API_MODELS.text[0].id;
+  });
+  const [ttsModel, setTtsModel] = useState(() => {
+    const saved = localStorage.getItem('geminiTtsModel');
+    if (saved && saved.endsWith('-tts')) return API_MODELS.tts[0].id;
+    return saved || API_MODELS.tts[0].id;
+  });
+  const [ttsVoice, setTtsVoice] = useState(() => localStorage.getItem('geminiTtsVoice') || 'Aoede');
+
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchExtractor, setSearchExtractor] = useState(null);
+  const [isExtractorLoading, setIsExtractorLoading] = useState(false);
+  const [searchInsights, setSearchInsights] = useState({});
+  const [loadingSearchInsightIdx, setLoadingSearchInsightIdx] = useState(null);
+  const [isTestingApi, setIsTestingApi] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  useEffect(() => {
+    if (isSearchOpen && !searchExtractor && !isExtractorLoading) {
+      setIsExtractorLoading(true);
+      env.allowLocalModels = false;
+      pipeline('feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2').then(extractor => {
+        setSearchExtractor(() => extractor);
+        setIsExtractorLoading(false);
+      }).catch(err => {
+        console.error("Failed to load pipeline", err);
+        setIsExtractorLoading(false);
+      });
+    }
+  }, [isSearchOpen, searchExtractor, isExtractorLoading]);
+
+  const handleSemanticSearch = async (e) => {
+    e.preventDefault();
+    if (!searchExtractor || !searchQuery.trim()) return;
+    setIsSearching(true);
+    setSearchInsights({});
+    
+    try {
+      const output = await searchExtractor(searchQuery, { pooling: 'mean', normalize: true });
+      const userVector = Array.from(output.data);
+      
+      const results = quizEmbeddingsData.map(item => {
+        if (!item.embedding) return { ...item, score: 0 };
+        return {
+          ...item,
+          score: cosineSimilarity(userVector, item.embedding)
+        };
+      }).filter(item => item.score > 0.3).sort((a, b) => b.score - a.score).slice(0, 5);
+      
+      setSearchResults(results);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('geminiApiKey', apiKey);
     localStorage.setItem('geminiTextModel', textModel);
     localStorage.setItem('geminiTtsModel', ttsModel);
-  }, [apiKey, textModel, ttsModel]);
-  
+    localStorage.setItem('geminiTtsVoice', ttsVoice);
+  }, [apiKey, textModel, ttsModel, ttsVoice]);
+
   const [appSettings, setAppSettings] = useState({
-    fontSize: 24, 
-    textColor: '#f8fafc', 
-    bgColor: '#0f172a'    
+    fontSize: 24,
+    textColor: '#f8fafc',
+    bgColor: '#0f172a'
   });
 
   const [quizConfig, setQuizConfig] = useState({
@@ -147,11 +229,11 @@ export default function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userInput, setUserInput] = useState('');
   const [showHint, setShowHint] = useState(false);
-  const [status, setStatus] = useState('typing'); 
-  
+  const [status, setStatus] = useState('typing');
+
   const [score, setScore] = useState(0);
-  const [wrongItems, setWrongItems] = useState([]); 
-  
+  const [wrongItems, setWrongItems] = useState([]);
+
   const [aiData, setAiData] = useState(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isTtsLoading, setIsTtsLoading] = useState(false);
@@ -175,7 +257,7 @@ export default function App() {
       setTimeout(() => setToastMsg(''), 4000);
       return;
     }
-    
+
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
         setToastMsg("💡 預覽環境受限無法全螢幕，部署為正式網站後即可使用！");
@@ -183,7 +265,7 @@ export default function App() {
       });
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().catch(()=>{});
+        document.exitFullscreen().catch(() => { });
       }
     }
   };
@@ -222,12 +304,12 @@ export default function App() {
       newQuestions = generateQuestions(config);
       setCurrentCustomQuiz(null);
     }
-    
+
     setQuestions(newQuestions);
     setCurrentIndex(0);
     setUserInput('');
     setScore(0);
-    setWrongItems(isReview ? [] : []); 
+    setWrongItems(isReview ? [] : []);
     setStatus('typing');
     setAiData(null);
     setShowHint(false);
@@ -245,10 +327,10 @@ export default function App() {
 
   const checkAnswer = () => {
     if (!currentQuestion || status !== 'typing') return;
-    
+
     const trimmedInput = userInput.trim().replace(/\s+/g, '');
     const normalizeStr = (str) => str.replace(/[\s　。、？！?!]/g, '');
-    
+
     const expandedAnswers = new Set();
     currentQuestion.ja.forEach(ans => {
       expandedAnswers.add(normalizeStr(ans));
@@ -301,9 +383,8 @@ export default function App() {
         contents: [{ parts: [{ text: `Say in a clear, natural Japanese accent: ${text}` }] }],
         generationConfig: {
           responseModalities: ["AUDIO"],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } }
-        },
-        model: "gemini-2.5-flash-preview-tts"
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: ttsVoice } } }
+        }
       };
       const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const base64Data = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
@@ -313,7 +394,61 @@ export default function App() {
         const audio = new Audio(audioUrl);
         audio.play();
       }
-    } catch (e) { console.error("TTS Failed:", e); } finally { setIsTtsLoading(false); }
+    } catch (e) {
+      console.error("TTS Failed:", e);
+      if (e.message && (e.message.includes('429') || e.message.includes('quota'))) {
+        setToastMsg("💡 語音額度可能已耗盡！請至右上角設定「切換其他語音模型」試試看喔！");
+      } else {
+        setToastMsg("💡 語音播放失敗，請檢查網路或嘗試切換語音模型。");
+      }
+      setTimeout(() => setToastMsg(''), 5000);
+    } finally { setIsTtsLoading(false); }
+  };
+
+  const fetchSearchItemInsight = async (item, idx) => {
+    if (!apiKey) {
+      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key");
+      setTimeout(() => setToastMsg(''), 4000);
+      return;
+    }
+    setLoadingSearchInsightIdx(idx);
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`;
+      const prompt = `你是一個專業的日文老師。請針對這個日文內容：'${item.ja[0]}' (${item.zh})，提供：1. 簡短的語感、用法解析或背誦提示（50字以內）。2. 兩個實用的生活例句。`;
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }]
+      };
+      
+      if (!textModel.toLowerCase().includes('gemma')) {
+        payload.generationConfig = {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              explanation: { type: "STRING" },
+              examples: { type: "ARRAY", items: { type: "OBJECT", properties: { ja: { type: "STRING" }, kana: { type: "STRING" }, zh: { type: "STRING" } } } }
+            }
+          }
+        };
+      } else {
+        payload.contents[0].parts[0].text += '\n請務必只輸出純 JSON 格式，格式如下：{"explanation": "...", "examples": [{"ja": "...", "kana": "...", "zh": "..."}]}';
+      }
+
+      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      let text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        if (textModel.toLowerCase().includes('gemma')) {
+          text = text.replace(/```json\n?|\n?```/g, '').trim();
+        }
+        setSearchInsights(prev => ({ ...prev, [idx]: JSON.parse(text) }));
+      }
+    } catch (e) {
+      console.error("Search AI Insight Failed:", e);
+      setToastMsg(`💡 解析失敗：${e.message.substring(0, 50)}...`);
+      setTimeout(() => setToastMsg(''), 3000);
+    } finally {
+      setLoadingSearchInsightIdx(null);
+    }
   };
 
   const fetchAIInsights = async () => {
@@ -328,8 +463,11 @@ export default function App() {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`;
       const prompt = `你是一個專業的日文老師。請針對這個日文內容：'${currentQuestion.ja[0]}' (${currentQuestion.zh})，提供：1. 簡短的語感、用法解析或背誦提示（50字以內）。2. 兩個實用的生活例句。`;
       const payload = {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
+        contents: [{ parts: [{ text: prompt }] }]
+      };
+      
+      if (!textModel.toLowerCase().includes('gemma')) {
+        payload.generationConfig = {
           responseMimeType: "application/json",
           responseSchema: {
             type: "OBJECT",
@@ -338,12 +476,64 @@ export default function App() {
               examples: { type: "ARRAY", items: { type: "OBJECT", properties: { ja: { type: "STRING" }, kana: { type: "STRING" }, zh: { type: "STRING" } } } }
             }
           }
+        };
+      } else {
+        payload.contents[0].parts[0].text += '\n請務必只輸出純 JSON 格式，格式如下：{"explanation": "...", "examples": [{"ja": "...", "kana": "...", "zh": "..."}]}';
+      }
+
+      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      let text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        if (textModel.toLowerCase().includes('gemma')) {
+          text = text.replace(/```json\n?|\n?```/g, '').trim();
         }
+        setAiData(JSON.parse(text));
+      }
+    } catch (e) {
+      console.error("AI Generation Failed:", e);
+      setToastMsg(`💡 生成失敗：${e.message.substring(0, 50)}...`);
+    } finally { setIsAiGenerating(false); }
+  };
+
+  const testApiConnection = async () => {
+    if (!apiKey) {
+      setToastMsg("💡 請先輸入 API Key");
+      setTimeout(() => setToastMsg(''), 3000);
+      return;
+    }
+    if (apiKey.length < 30) {
+      setToastMsg("⚠️ API Key 看起來不完整（僅 " + apiKey.length + " 字元，正常應為 39 字元），請重新貼上完整的金鑰。");
+      setTimeout(() => setToastMsg(''), 5000);
+      return;
+    }
+    setIsTestingApi(true);
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`;
+      const payload = {
+        contents: [{ parts: [{ text: "Hello, reply with 'OK' only." }] }]
       };
       const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) setAiData(JSON.parse(text));
-    } catch (e) { console.error("AI Failed:", e); } finally { setIsAiLoading(false); }
+      
+      if (result && result.candidates) {
+        setToastMsg("✅ API 連線成功！模型可正常調用。");
+      } else {
+        throw new Error("回傳格式異常");
+      }
+    } catch (e) {
+      console.error("API Test Failed:", e);
+      if (e.status === 400) {
+        setToastMsg("❌ API Key 無效！請確認您已完整貼上正確的金鑰（可至 Google AI Studio 重新複製）。");
+      } else if (e.status === 404) {
+        setToastMsg("❌ 找不到模型 '" + textModel + "'！請嘗試切換其他模型。");
+      } else if (e.status === 429) {
+        setToastMsg("⚠️ API 額度已耗盡！請稍後再試或切換模型。");
+      } else {
+        setToastMsg(`❌ 連線失敗：${e.message.substring(0, 80)}`);
+      }
+    } finally {
+      setIsTestingApi(false);
+      setTimeout(() => setToastMsg(''), 5000);
+    }
   };
 
   const handleGenerateAiQuiz = async () => {
@@ -400,28 +590,49 @@ export default function App() {
           <X size={20} />
         </button>
         <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Settings size={20} /> 介面設定</h3>
-        
+
         <div className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center justify-between">
               <span>Gemini API Key</span>
               <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-emerald-500 hover:underline text-xs">取得金鑰</a>
             </label>
-            <input 
-              type="password" 
-              value={apiKey} 
-              onChange={(e) => setApiKey(e.target.value)} 
-              className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm" 
-              placeholder="輸入您的 API Key..." 
-            />
+            <div className="relative">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full p-2 pr-10 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm"
+                placeholder="輸入您的 API Key..."
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(v => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                title={showApiKey ? '隱藏金鑰' : '顯示金鑰'}
+              >
+                {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             <p className="text-xs text-gray-400 mt-2">
-              *金鑰僅保存在您的本機瀏覽器，不會上傳至任何伺服器。<br/>
+              *金鑰僅保存在您的本機瀏覽器，不會上傳至任何伺服器。<br />
               *若無金鑰，請至 <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" className="text-emerald-500 underline">Google AI Studio</a> 免費註冊生成。
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">文字模型 (解析與測驗生成)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center justify-between">
+              <span>文字模型 (解析與測驗生成)</span>
+              <button 
+                onClick={testApiConnection} 
+                disabled={isTestingApi}
+                className="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
+                title="測試金鑰與模型是否可用"
+              >
+                {isTestingApi ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                測試連線
+              </button>
+            </label>
             <select value={textModel} onChange={(e) => setTextModel(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
               {API_MODELS.text.map(model => (
                 <option key={model.id} value={model.id}>{model.label} (額度: {model.limitStr})</option>
@@ -439,10 +650,26 @@ export default function App() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">語音角色 (發音聲線)</label>
+            <select value={ttsVoice} onChange={(e) => setTtsVoice(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
+              {[
+                { id: 'Aoede', label: 'Aoede (女聲)' },
+                { id: 'Puck', label: 'Puck (男聲)' },
+                { id: 'Charon', label: 'Charon (男聲)' },
+                { id: 'Kore', label: 'Kore (女聲)' },
+                { id: 'Fenrir', label: 'Fenrir (男聲)' },
+                { id: 'Leda', label: 'Leda (女聲)' }
+              ].map(voice => (
+                <option key={voice.id} value={voice.id}>{voice.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">字體大小 ({appSettings.fontSize}px)</label>
             <input type="range" min="16" max="48" step="2" value={appSettings.fontSize} onChange={(e) => setAppSettings(s => ({ ...s, fontSize: Number(e.target.value) }))} className="w-full accent-emerald-500" />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">文字顏色 (色碼)</label>
             <div className="flex items-center gap-3">
@@ -466,10 +693,17 @@ export default function App() {
   );
 
   return (
-    <div 
-      className="min-h-screen font-sans transition-colors duration-300 flex flex-col items-center py-8 px-4 relative z-10"
-      style={{ backgroundColor: appSettings.bgColor, color: appSettings.textColor }}
-    >
+    <>
+      {import.meta.env.DEV && (
+        <div className="fixed top-0 left-0 w-full bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-mono py-1.5 px-4 text-center z-50 flex justify-between shadow-sm">
+          <span className="font-bold flex items-center gap-2">🛠️ Local Development Server</span>
+          <span className="opacity-100 font-bold tracking-wide">開發暗號：星空啟航 (v1.1.0)</span>
+        </div>
+      )}
+      <div
+        className={`min-h-screen font-sans transition-colors duration-300 flex flex-col items-center py-8 px-4 relative z-10 ${import.meta.env.DEV ? 'mt-6' : ''}`}
+        style={{ backgroundColor: appSettings.bgColor, color: appSettings.textColor }}
+      >
       <ParticleBackground />
 
       {toastMsg && (
@@ -491,7 +725,7 @@ export default function App() {
         </div>
       )}
 
-      <button 
+      <button
         onClick={toggleFullScreen}
         className="fixed left-6 top-6 z-50 p-2 rounded-full hover:bg-white/20 transition-colors opacity-60 hover:opacity-100 cursor-pointer"
         title={isFullscreen ? "退出全螢幕" : "進入全螢幕"}
@@ -508,13 +742,81 @@ export default function App() {
               <X size={20} />
             </button>
             <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-purple-700">
-              <Sparkles size={22} className="text-purple-500"/> AI 情境擴充出題
+              <Sparkles size={22} className="text-purple-500" /> AI 情境擴充出題
             </h3>
             <p className="text-sm text-gray-500 mb-5 leading-relaxed">想練習什麼特別的情境？輸入關鍵字，AI 老師馬上為你量身打造專屬打字題庫！</p>
             <input type="text" value={themeInput} onChange={(e) => setThemeInput(e.target.value)} disabled={isAiGenerating} placeholder="例如：居酒屋點餐、動漫必殺技..." className="w-full p-3 border-2 border-purple-100 rounded-xl outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10 mb-5 transition-all text-gray-800 font-medium" />
             <button onClick={handleGenerateAiQuiz} disabled={!themeInput.trim() || isAiGenerating} className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-all flex justify-center items-center gap-2 disabled:opacity-60 shadow-lg shadow-purple-200">
-              {isAiGenerating ? <><Loader2 className="animate-spin" size={18}/> 題庫生成中...</> : <><Sparkles size={18}/> 開始生成並測驗</>}
+              {isAiGenerating ? <><Loader2 className="animate-spin" size={18} /> 題庫生成中...</> : <><Sparkles size={18} /> 開始生成並測驗</>}
             </button>
+          </div>
+        </div>
+      )}
+
+      {isSearchOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl relative animate-in zoom-in-95 max-h-[80vh] flex flex-col" style={{ color: '#1f2937' }}>
+            <button onClick={() => setIsSearchOpen(false)} className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors">
+              <X size={20} />
+            </button>
+            <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-blue-700">
+              <Search size={22} className="text-blue-500" /> 智慧語意搜尋
+            </h3>
+            <p className="text-sm text-gray-500 mb-5 leading-relaxed">
+              輸入概念或情境（例如：「出國會搭的交通工具」），AI 會為您找出最相關的詞彙！
+              {isExtractorLoading && <span className="block mt-2 text-amber-500 font-medium">⏳ 正在載入語意模型引擎，請稍候... (約 30MB)</span>}
+            </p>
+            <form onSubmit={handleSemanticSearch} className="mb-4">
+              <div className="flex gap-2">
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} disabled={isSearching || isExtractorLoading} placeholder="輸入你想找的語意..." className="flex-1 p-3 border-2 border-blue-100 rounded-xl outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all text-gray-800 font-medium" />
+                <button type="submit" disabled={!searchQuery.trim() || isSearching || isExtractorLoading} className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 rounded-xl font-bold hover:opacity-90 transition-all flex justify-center items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-200">
+                  {isSearching ? <Loader2 className="animate-spin" size={18} /> : '搜尋'}
+                </button>
+              </div>
+            </form>
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-[200px]">
+              {searchResults.length > 0 ? (
+                <div className="space-y-3">
+                  {searchResults.map((item, idx) => (
+                    <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-2">
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-lg text-gray-800">{Array.isArray(item.ja) ? item.ja.join(', ') : item.ja}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-mono">相似度: {(item.score * 100).toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      <span className="text-gray-600 font-medium mb-1">{item.zh}</span>
+                      
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => playAudio(item.ja[0])} disabled={isTtsLoading} className="text-gray-500 hover:text-emerald-600 p-1.5 bg-gray-200 hover:bg-emerald-100 rounded-full transition-colors" title="發音">
+                          <Volume2 size={16} />
+                        </button>
+                        <button onClick={() => fetchSearchItemInsight(item, idx)} disabled={loadingSearchInsightIdx === idx} className="text-gray-500 hover:text-indigo-600 px-2 py-1 bg-gray-200 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1" title="AI 解析">
+                          {loadingSearchInsightIdx === idx ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                          <span className="text-xs font-medium">解析</span>
+                        </button>
+                      </div>
+                      
+                      {searchInsights[idx] && (
+                        <div className="mt-2 bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 text-sm animate-in fade-in slide-in-from-top-2">
+                          <p className="text-indigo-900 mb-2 leading-relaxed font-medium">{searchInsights[idx].explanation}</p>
+                          <div className="space-y-2">
+                            {searchInsights[idx].examples.map((ex, i) => (
+                              <div key={i} className="pl-3 border-l-2 border-indigo-300">
+                                <p className="text-gray-800 font-medium">{ex.ja} <span className="text-xs text-gray-500 font-normal">({ex.kana})</span></p>
+                                <p className="text-gray-600 mt-0.5">{ex.zh}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">沒有符合的結果，請試試其他關鍵字</div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -525,8 +827,8 @@ export default function App() {
             <button onClick={() => setIsSettingsOpen(true)} className="absolute right-6 top-6 p-2 rounded-full hover:bg-white/20 transition-colors"><Settings size={24} /></button>
             <div className="w-20 h-20 bg-emerald-400 text-white rounded-2xl mx-auto flex items-center justify-center mb-6 animate-sway shadow-lg"><BookOpen size={40} /></div>
             <h1 className="text-3xl sm:text-5xl font-extrabold mb-3 tracking-tight">日語打字練習系統</h1>
-            <p className="font-medium mb-10 text-lg opacity-80">專屬伊布的日語筆記特訓，從單字到句型完全制霸</p>
-            <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <p className="font-medium mb-10 text-lg opacity-80">由 Google AI 開發的日語筆記特訓，從單字到句型完全制霸</p>
+            <div className="grid sm:grid-cols-3 gap-4 w-full">
               <button onClick={() => setScreen('config')} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-emerald-100 hover:border-emerald-400 rounded-2xl transition-all hover:-translate-y-1 text-gray-800">
                 <Play className="text-emerald-500 mb-3 group-hover:scale-110 transition-transform" size={32} />
                 <h3 className="text-xl font-bold text-emerald-800 mb-1">開始自訂測驗</h3>
@@ -538,10 +840,16 @@ export default function App() {
                 <h3 className="text-xl font-bold text-purple-800 mb-1 relative z-10">✨ AI 智能情境特訓</h3>
                 <p className="text-purple-600/80 text-sm relative z-10">自訂情境，AI 即時為你擴充出題</p>
               </button>
+              <button onClick={() => setIsSearchOpen(true)} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-blue-100 hover:border-blue-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 opacity-50 pointer-events-none"></div>
+                <Search className="text-blue-500 mb-3 group-hover:scale-110 transition-transform duration-300 relative z-10" size={32} />
+                <h3 className="text-xl font-bold text-blue-800 mb-1 relative z-10">🔍 智慧語意搜尋</h3>
+                <p className="text-blue-600/80 text-sm relative z-10">用自然語言搜尋相關詞彙</p>
+              </button>
             </div>
           </div>
 
-          {/* YouTube Demo Video */}
+          {/* YouTube Demo Video 
           <div className="w-full max-w-3xl bg-white/5 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl text-center">
             <h3 className="text-xl sm:text-2xl font-bold mb-6 flex items-center justify-center gap-2 text-white">
               <Play className="text-emerald-400" fill="currentColor" size={24} /> 系統操作示範
@@ -558,25 +866,26 @@ export default function App() {
               </iframe>
             </div>
           </div>
+          */}
         </div>
       )}
 
       {screen === 'config' && (
         <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-xl border border-white/20 p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 relative z-10" style={{ color: '#1f2937' }}>
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold flex items-center gap-2"><Settings2 className="text-emerald-500"/> 測驗設定</h2>
-            <button onClick={() => setScreen('home')} className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><X size={20}/></button>
+            <h2 className="text-2xl font-bold flex items-center gap-2"><Settings2 className="text-emerald-500" /> 測驗設定</h2>
+            <button onClick={() => setScreen('home')} className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><X size={20} /></button>
           </div>
           <div className="space-y-6 text-left">
             <div>
               <label className="block font-semibold mb-2">選擇章節</label>
-              <select value={quizConfig.chapter} onChange={e => setQuizConfig({...quizConfig, chapter: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+              <select value={quizConfig.chapter} onChange={e => setQuizConfig({ ...quizConfig, chapter: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
                 {CHAPTERS.map(ch => <option key={ch.id} value={ch.id} disabled={ch.id === 'divider'}>{ch.name}</option>)}
               </select>
             </div>
             <div>
               <label className="block font-semibold mb-2">題型偏好</label>
-              <select value={quizConfig.type} onChange={e => setQuizConfig({...quizConfig, type: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+              <select value={quizConfig.type} onChange={e => setQuizConfig({ ...quizConfig, type: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none">
                 {PRACTICE_TYPES.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
               </select>
             </div>
@@ -585,11 +894,11 @@ export default function App() {
                 <span>測驗題數</span>
                 <span className="text-emerald-600 font-bold">{quizConfig.count} 題</span>
               </label>
-              <input type="range" min="5" max="30" step="1" value={quizConfig.count} onChange={e => setQuizConfig({...quizConfig, count: Number(e.target.value)})} className="w-full accent-emerald-500" />
+              <input type="range" min="5" max="30" step="1" value={quizConfig.count} onChange={e => setQuizConfig({ ...quizConfig, count: Number(e.target.value) })} className="w-full accent-emerald-500" />
               <p className="text-xs text-gray-400 mt-2">*若選取題數大於庫存數量，題目將會在保證跑完一輪後隨機重複。</p>
             </div>
             <button onClick={() => startQuiz(quizConfig)} className="w-full py-4 mt-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-lg flex justify-center items-center gap-2 shadow-lg shadow-emerald-200 transition-transform active:scale-95">
-              <Play fill="currentColor" size={20}/> 進入測驗
+              <Play fill="currentColor" size={20} /> 進入測驗
             </button>
           </div>
         </div>
@@ -600,7 +909,7 @@ export default function App() {
           <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-sm p-4 flex justify-between items-center border border-white/20" style={{ color: '#1f2937' }}>
             <button onClick={() => setShowQuitConfirm(true)} className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-red-500 transition-colors"><LogOut size={16} /> 退出測驗</button>
             <div className="font-bold bg-gray-100 px-4 py-1.5 rounded-full text-sm tracking-widest flex items-center gap-2">
-              {currentQuestion.chapter === 'AI' && <Sparkles size={14} className="text-purple-500"/>}
+              {currentQuestion.chapter === 'AI' && <Sparkles size={14} className="text-purple-500" />}
               {currentIndex + 1} / {questions.length}
             </div>
             <button onClick={() => setShowHint(!showHint)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${showHint ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
@@ -646,7 +955,7 @@ export default function App() {
                 )}
                 {aiData && (
                   <div className="bg-white rounded-xl p-5 border border-emerald-100 shadow-sm text-left text-gray-800">
-                    <h4 className="font-bold text-emerald-800 flex items-center gap-2 mb-2"><Sparkles size={18} className="text-emerald-500"/> AI 老師解析</h4>
+                    <h4 className="font-bold text-emerald-800 flex items-center gap-2 mb-2"><Sparkles size={18} className="text-emerald-500" /> AI 老師解析</h4>
                     <p className="text-sm mb-4 leading-relaxed">{aiData.explanation}</p>
                     <div className="space-y-3">
                       {aiData.examples.map((ex, i) => (
@@ -677,7 +986,7 @@ export default function App() {
           <div className="p-6 sm:p-8">
             {wrongItems.length > 0 ? (
               <div className="mb-8">
-                <h3 className="text-lg font-bold text-red-500 mb-4 flex items-center gap-2"><BookOpen size={20}/> 錯題回顧 ({wrongItems.length} 題)</h3>
+                <h3 className="text-lg font-bold text-red-500 mb-4 flex items-center gap-2"><BookOpen size={20} /> 錯題回顧 ({wrongItems.length} 題)</h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                   {wrongItems.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center p-3 bg-red-50/50 border border-red-100 rounded-xl">
@@ -691,12 +1000,13 @@ export default function App() {
               <div className={`py-8 text-center font-bold text-lg ${currentCustomQuiz ? 'text-purple-600' : 'text-emerald-600'}`}>🎉 太厲害了！全對完美通關！</div>
             )}
             <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-gray-100">
-              <button onClick={() => setScreen('home')} className="py-3 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"><Home size={18}/> 回到首頁</button>
-              <button onClick={() => startQuiz(quizConfig, false, currentCustomQuiz)} className={`py-3 flex items-center justify-center gap-2 text-white font-bold rounded-xl transition-colors shadow-lg ${currentCustomQuiz ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200'}`}><RotateCcw size={18}/> 相同設定再測</button>
+              <button onClick={() => setScreen('home')} className="py-3 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"><Home size={18} /> 回到首頁</button>
+              <button onClick={() => startQuiz(quizConfig, false, currentCustomQuiz)} className={`py-3 flex items-center justify-center gap-2 text-white font-bold rounded-xl transition-colors shadow-lg ${currentCustomQuiz ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200'}`}><RotateCcw size={18} /> 相同設定再測</button>
             </div>
           </div>
         </div>
       )}
     </div>
+    </>
   );
 }
