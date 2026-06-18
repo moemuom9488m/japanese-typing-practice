@@ -697,7 +697,7 @@ export default function App() {
       {import.meta.env.DEV && (
         <div className="fixed top-0 left-0 w-full bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-mono py-1.5 px-4 text-center z-50 flex justify-between shadow-sm">
           <span className="font-bold flex items-center gap-2">🛠️ Local Development Server</span>
-          <span className="opacity-100 font-bold tracking-wide">開發暗號：星空啟航 (v1.1.0)</span>
+          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞補全 (v1.2.1)</span>
         </div>
       )}
       <div
