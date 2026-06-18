@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { pipeline, env } from '@xenova/transformers';
-import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, Settings, X, RefreshCw, LogOut, Maximize, Minimize, Search } from 'lucide-react';
+import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, BookText, Settings, X, RefreshCw, LogOut, Maximize, Minimize, Search } from 'lucide-react';
 import quizEmbeddingsData from './data/quiz_with_embeddings.json';
 import { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES, API_MODELS } from './data.js';
 
@@ -150,6 +150,8 @@ export default function App() {
   });
   const [ttsVoice, setTtsVoice] = useState(() => localStorage.getItem('geminiTtsVoice') || 'Aoede');
 
+  const [isVerbTableOpen, setIsVerbTableOpen] = useState(false);
+  const [verbSearchQuery, setVerbSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -583,6 +585,89 @@ export default function App() {
     }
   };
 
+  const renderVerbTableModal = () => {
+    const filteredVerbs = verbTableData.filter(v => 
+      v.baseJa.includes(verbSearchQuery) || 
+      v.zh.includes(verbSearchQuery) || 
+      getHiraganaVersion(v.baseJa).includes(verbSearchQuery)
+    );
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-4xl shadow-2xl relative animate-in zoom-in-95 flex flex-col max-h-[85vh]" style={{ color: '#1f2937' }}>
+          <button onClick={() => setIsVerbTableOpen(false)} className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+          <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-rose-700">
+            <BookText size={22} className="text-rose-500" /> 動詞變化字典
+          </h3>
+          <p className="text-sm text-gray-500 mb-4 leading-relaxed">搜尋日文或中文，快速查閱各種動詞型態。點擊發音按鈕即可聆聽。</p>
+          
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                value={verbSearchQuery} 
+                onChange={(e) => setVerbSearchQuery(e.target.value)} 
+                placeholder="輸入關鍵字搜尋... (例如: 寝る, 睡覺)" 
+                className="w-full pl-10 p-3 border-2 border-rose-100 rounded-xl outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-500/10 transition-all text-gray-800 font-medium" 
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto custom-scrollbar rounded-xl border border-gray-200">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">中文意思</th>
+                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">原形</th>
+                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">ます形</th>
+                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">て形</th>
+                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">た形</th>
+                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">ない形</th>
+                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">其他</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredVerbs.length > 0 ? filteredVerbs.map((verb, idx) => (
+                  <tr key={idx} className="hover:bg-rose-50/30 transition-colors">
+                    <td className="p-3 font-medium text-gray-800">{verb.zh}</td>
+                    {[
+                      { key: '原形', val: verb.forms['原形'] },
+                      { key: 'ます形', val: verb.forms['ます形'] },
+                      { key: 'て形', val: verb.forms['て形'] },
+                      { key: 'た形', val: verb.forms['た形'] },
+                      { key: 'ない形', val: verb.forms['ない形'] }
+                    ].map(f => (
+                      <td key={f.key} className="p-3">
+                        {f.val && (
+                          <div className="flex items-center gap-1 group">
+                            <span>{f.val}</span>
+                            <button onClick={() => playAudio(f.val)} disabled={isTtsLoading} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-emerald-600 transition-opacity">
+                              <Volume2 size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                    <td className="p-3 text-sm text-gray-500">
+                      {['意向形', 'ば形', '命令形'].map(key => verb.forms[key] ? `${verb.forms[key]}` : null).filter(Boolean).join(', ')}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-gray-400">找不到符合的動詞</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderSettingsModal = () => (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl relative" style={{ color: '#1f2937' }}>
@@ -697,7 +782,7 @@ export default function App() {
       {import.meta.env.DEV && (
         <div className="fixed top-0 left-0 w-full bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-mono py-1.5 px-4 text-center z-50 flex justify-between shadow-sm">
           <span className="font-bold flex items-center gap-2">🛠️ Local Development Server</span>
-          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞補全 (v1.2.1)</span>
+          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞查表字典 (v1.3.0)</span>
         </div>
       )}
       <div
@@ -733,6 +818,7 @@ export default function App() {
         {isFullscreen ? <Minimize size={26} /> : <Maximize size={26} />}
       </button>
 
+      {isVerbTableOpen && renderVerbTableModal()}
       {isSettingsOpen && renderSettingsModal()}
 
       {showAiModal && (
@@ -828,7 +914,7 @@ export default function App() {
             <div className="w-20 h-20 bg-emerald-400 text-white rounded-2xl mx-auto flex items-center justify-center mb-6 animate-sway shadow-lg"><BookOpen size={40} /></div>
             <h1 className="text-3xl sm:text-5xl font-extrabold mb-3 tracking-tight">日語打字練習系統</h1>
             <p className="font-medium mb-10 text-lg opacity-80">由 Google AI 開發的日語筆記特訓，從單字到句型完全制霸</p>
-            <div className="grid sm:grid-cols-3 gap-4 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
               <button onClick={() => setScreen('config')} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-emerald-100 hover:border-emerald-400 rounded-2xl transition-all hover:-translate-y-1 text-gray-800">
                 <Play className="text-emerald-500 mb-3 group-hover:scale-110 transition-transform" size={32} />
                 <h3 className="text-xl font-bold text-emerald-800 mb-1">開始自訂測驗</h3>
@@ -845,6 +931,12 @@ export default function App() {
                 <Search className="text-blue-500 mb-3 group-hover:scale-110 transition-transform duration-300 relative z-10" size={32} />
                 <h3 className="text-xl font-bold text-blue-800 mb-1 relative z-10">🔍 智慧語意搜尋</h3>
                 <p className="text-blue-600/80 text-sm relative z-10">用自然語言搜尋相關詞彙</p>
+              </button>
+              <button onClick={() => setIsVerbTableOpen(true)} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-rose-100 hover:border-rose-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
+                <div className="absolute inset-0 bg-gradient-to-br from-rose-50 to-pink-50 opacity-50 pointer-events-none"></div>
+                <BookText className="text-rose-500 mb-3 group-hover:scale-110 transition-transform duration-300 relative z-10" size={32} />
+                <h3 className="text-xl font-bold text-rose-800 mb-1 relative z-10">📖 動詞變化字典</h3>
+                <p className="text-rose-600/80 text-sm relative z-10">查閱動詞的所有變化型態</p>
               </button>
             </div>
           </div>
@@ -1009,4 +1101,25 @@ export default function App() {
     </div>
     </>
   );
-}
+const verbTableData = useMemo(() => {
+    const verbs = QUIZ_DATA.filter(q => q.chapter === 'verb_conjugation');
+    const groups = {};
+    let currentVerb = null;
+    verbs.forEach(v => {
+      const isBase = v.zh.includes('(原形)');
+      const baseMeaning = v.zh.replace(/\s*\(.*\)/, '');
+      if (isBase) {
+        currentVerb = v.ja[0];
+        groups[currentVerb] = { zh: baseMeaning, forms: {} };
+      }
+      if (currentVerb) {
+        const formMatch = v.zh.match(/\((.*?)\)/);
+        if (formMatch) {
+          groups[currentVerb].forms[formMatch[1]] = v.ja[0];
+        }
+      }
+    });
+    return Object.entries(groups).map(([baseJa, data]) => ({ baseJa, zh: data.zh, forms: data.forms }));
+  }, []);
+
+  }
