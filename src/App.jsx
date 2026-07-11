@@ -1,16 +1,34 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { pipeline, env } from '@xenova/transformers';
-import { Settings2, CheckCircle2, XCircle, Eye, EyeOff, RotateCcw, ChevronRight, Sparkles, Volume2, Loader2, Home, Play, BookOpen, BookText, Pencil, Settings, X, RefreshCw, LogOut, Maximize, Minimize, Search } from 'lucide-react';
-import quizEmbeddingsData from './data/quiz_with_embeddings.json';
-import { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES, API_MODELS } from './data.js';
+import Settings2 from 'lucide-react/dist/esm/icons/settings-2.js';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.js';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle.js';
+import Eye from 'lucide-react/dist/esm/icons/eye.js';
+import EyeOff from 'lucide-react/dist/esm/icons/eye-off.js';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw.js';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.js';
+import Sparkles from 'lucide-react/dist/esm/icons/sparkles.js';
+import Volume2 from 'lucide-react/dist/esm/icons/volume-2.js';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2.js';
+import Home from 'lucide-react/dist/esm/icons/home.js';
+import Play from 'lucide-react/dist/esm/icons/play.js';
+import BookOpen from 'lucide-react/dist/esm/icons/book-open.js';
+import BookText from 'lucide-react/dist/esm/icons/book-text.js';
+import Pencil from 'lucide-react/dist/esm/icons/pencil.js';
+import Settings from 'lucide-react/dist/esm/icons/settings.js';
+import X from 'lucide-react/dist/esm/icons/x.js';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw.js';
+import LogOut from 'lucide-react/dist/esm/icons/log-out.js';
+import Maximize from 'lucide-react/dist/esm/icons/maximize.js';
+import Minimize from 'lucide-react/dist/esm/icons/minimize.js';
+import Search from 'lucide-react/dist/esm/icons/search.js';
+import { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES, API_MODELS, VERB_TABLE_QUIZ_DATA } from './data.js';
+import { getHiraganaVersion, fetchWithRetry } from './utils.js';
+import VerbDictPage from './VerbDictPage.jsx';
+import AiQuizPage from './AiQuizPage.jsx';
+import SearchPage from './SearchPage.jsx';
 
 // API key will be managed via state and localStorage in App component
-
-const getHiraganaVersion = (text) => {
-  if (!text) return '';
-  const parts = text.split(KANJI_REGEX);
-  return parts.map(part => KANJI_DICT[part] || part).join('');
-};
 
 const renderWithFurigana = (text, isHint = false) => {
   if (!text) return null;
@@ -28,26 +46,7 @@ const renderWithFurigana = (text, isHint = false) => {
   });
 };
 
-const fetchWithRetry = async (url, options, retries = 5) => {
-  const delays = [1000, 2000, 4000, 8000, 16000];
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await fetch(url, options);
-      if (!response.ok) {
-        const errText = await response.text();
-        const err = new Error(`HTTP error! status: ${response.status}, message: ${errText}`);
-        err.status = response.status;
-        throw err;
-      }
-      return await response.json();
-    } catch (error) {
-      if (i === retries - 1 || (error.status && error.status >= 400 && error.status < 500 && error.status !== 429)) {
-        throw error;
-      }
-      await new Promise(res => setTimeout(res, delays[i]));
-    }
-  }
-};
+
 
 function createWavFromPcmBase64(base64Str, sampleRate = 24000) {
   const binaryStr = atob(base64Str);
@@ -65,16 +64,7 @@ function createWavFromPcmBase64(base64Str, sampleRate = 24000) {
   return new Blob([view], { type: 'audio/wav' });
 }
 
-const cosineSimilarity = (vecA, vecB) => {
-  let dotProduct = 0, normA = 0, normB = 0;
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    normA += vecA[i] * vecA[i];
-    normB += vecB[i] * vecB[i];
-  }
-  if (normA === 0 || normB === 0) return 0;
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-};
+
 
 const ParticleBackground = () => {
   const canvasRef = useRef(null);
@@ -154,21 +144,30 @@ export default function App() {
   const [verbQuizIndex, setVerbQuizIndex] = useState(0);
   const [verbQuizInputs, setVerbQuizInputs] = useState({});
   const [verbQuizResults, setVerbQuizResults] = useState(null);
-  const [isVerbTableOpen, setIsVerbTableOpen] = useState(false);
-  const [verbSearchQuery, setVerbSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
+
+  // Transform VERB_TABLE_QUIZ_DATA into the format expected by the verb table modal and quiz
+  const verbTableData = useMemo(() => VERB_TABLE_QUIZ_DATA.map(v => ({
+    baseJa: v.word,
+    zh: v.meaning,
+    type: v.type,
+    forms: {
+      '原形': v.conjugations.shushi?.[0] || v.word,
+      'ます形': v.conjugations.renyo_base?.[0] || '',
+      'て形': v.conjugations.renyo_onbin?.[0] || '',
+      'た形': v.conjugations.renyo_onbin?.[1] || '',
+      'ない形': v.conjugations.mizen?.[0] || '',
+      '意向形': v.conjugations.mizen?.[1] || '',
+      'ば形': v.conjugations.katei?.[0] || '',
+      '命令形': v.conjugations.meirei?.[0] || '',
+    }
+  })), []);
   const [searchExtractor, setSearchExtractor] = useState(null);
   const [isExtractorLoading, setIsExtractorLoading] = useState(false);
-  const [searchInsights, setSearchInsights] = useState({});
-  const [loadingSearchInsightIdx, setLoadingSearchInsightIdx] = useState(null);
   const [isTestingApi, setIsTestingApi] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
-    if (isSearchOpen && !searchExtractor && !isExtractorLoading) {
+    if (screen === 'search' && !searchExtractor && !isExtractorLoading) {
       setIsExtractorLoading(true);
       env.allowLocalModels = false;
       pipeline('feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2').then(extractor => {
@@ -179,33 +178,7 @@ export default function App() {
         setIsExtractorLoading(false);
       });
     }
-  }, [isSearchOpen, searchExtractor, isExtractorLoading]);
-
-  const handleSemanticSearch = async (e) => {
-    e.preventDefault();
-    if (!searchExtractor || !searchQuery.trim()) return;
-    setIsSearching(true);
-    setSearchInsights({});
-    
-    try {
-      const output = await searchExtractor(searchQuery, { pooling: 'mean', normalize: true });
-      const userVector = Array.from(output.data);
-      
-      const results = quizEmbeddingsData.map(item => {
-        if (!item.embedding) return { ...item, score: 0 };
-        return {
-          ...item,
-          score: cosineSimilarity(userVector, item.embedding)
-        };
-      }).filter(item => item.score > 0.3).sort((a, b) => b.score - a.score).slice(0, 5);
-      
-      setSearchResults(results);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSearching(false);
-    }
-  };
+  }, [screen, searchExtractor, isExtractorLoading]);
 
   useEffect(() => {
     localStorage.setItem('geminiApiKey', apiKey);
@@ -226,8 +199,6 @@ export default function App() {
     count: 10
   });
 
-  const [showAiModal, setShowAiModal] = useState(false);
-  const [themeInput, setThemeInput] = useState('');
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [currentCustomQuiz, setCurrentCustomQuiz] = useState(null);
 
@@ -462,52 +433,6 @@ const playAudio = async (text) => {
     } finally { setIsTtsLoading(false); }
   };
 
-  const fetchSearchItemInsight = async (item, idx) => {
-    if (!apiKey) {
-      setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key");
-      setTimeout(() => setToastMsg(''), 4000);
-      return;
-    }
-    setLoadingSearchInsightIdx(idx);
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`;
-      const prompt = `你是一個專業的日文老師。請針對這個日文內容：'${item.ja[0]}' (${item.zh})，提供：1. 簡短的語感、用法解析或背誦提示（50字以內）。2. 兩個實用的生活例句。`;
-      const payload = {
-        contents: [{ parts: [{ text: prompt }] }]
-      };
-      
-      if (!textModel.toLowerCase().includes('gemma')) {
-        payload.generationConfig = {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              explanation: { type: "STRING" },
-              examples: { type: "ARRAY", items: { type: "OBJECT", properties: { ja: { type: "STRING" }, kana: { type: "STRING" }, zh: { type: "STRING" } } } }
-            }
-          }
-        };
-      } else {
-        payload.contents[0].parts[0].text += '\n請務必只輸出純 JSON 格式，格式如下：{"explanation": "...", "examples": [{"ja": "...", "kana": "...", "zh": "..."}]}';
-      }
-
-      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      let text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) {
-        if (textModel.toLowerCase().includes('gemma')) {
-          text = text.replace(/```json\n?|\n?```/g, '').trim();
-        }
-        setSearchInsights(prev => ({ ...prev, [idx]: JSON.parse(text) }));
-      }
-    } catch (e) {
-      console.error("Search AI Insight Failed:", e);
-      setToastMsg(`💡 解析失敗：${e.message.substring(0, 50)}...`);
-      setTimeout(() => setToastMsg(''), 3000);
-    } finally {
-      setLoadingSearchInsightIdx(null);
-    }
-  };
-
   const fetchAIInsights = async () => {
     if (!currentQuestion || aiData || isAiLoading) return;
     if (!apiKey) {
@@ -549,7 +474,7 @@ const playAudio = async (text) => {
     } catch (e) {
       console.error("AI Generation Failed:", e);
       setToastMsg(`💡 生成失敗：${e.message.substring(0, 50)}...`);
-    } finally { setIsAiGenerating(false); }
+    } finally { setIsAiLoading(false); }
   };
 
   const testApiConnection = async () => {
@@ -593,8 +518,8 @@ const playAudio = async (text) => {
     }
   };
 
-  const handleGenerateAiQuiz = async () => {
-    if (!themeInput.trim()) return;
+  const handleGenerateAiQuiz = async (theme) => {
+    if (!theme.trim()) return;
     if (!apiKey) {
       setToastMsg("💡 請先至設定(右上角齒輪)輸入您的 Gemini API Key");
       setTimeout(() => setToastMsg(''), 4000);
@@ -604,7 +529,7 @@ const playAudio = async (text) => {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${apiKey}`;
       const payload = {
-        contents: [{ parts: [{ text: `你是一位專業的日語教師。請為學生產生一組關於情境：「${themeInput}」的日文打字測驗，共 8 題。程度適合 N5~N4 初學者，混合單字與實用短句。` }] }],
+        contents: [{ parts: [{ text: `你是一位專業的日語教師。請為學生產生一組關於情境：「${theme}」的日文打字測驗，共 8 題。程度適合 N5~N4 初學者，混合單字與實用短句。` }] }],
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -616,7 +541,7 @@ const playAudio = async (text) => {
                 chapter: { type: "STRING", description: "固定填入 'AI'" },
                 type: { type: "STRING", description: "填入 'vocab' 或 'sentence'" },
                 zh: { type: "STRING", description: "繁體中文題目(翻譯)" },
-                ja: { type: "ARRAY", items: { type: "STRING" }, description: "日文答案陣列，必須包含漢字寫法與純平假名寫法" }
+                ja: { type: "ARRAY", items: { type: "STRING" }, description: "日文答案陣列，必須包含漢字寫法與純平假名寫感" }
               },
               required: ["id", "chapter", "type", "zh", "ja"]
             }
@@ -628,8 +553,6 @@ const playAudio = async (text) => {
       if (text) {
         const aiQuestions = JSON.parse(text);
         startQuiz(null, false, aiQuestions);
-        setShowAiModal(false);
-        setThemeInput('');
       }
     } catch (e) {
       console.error("AI Quiz Gen Failed:", e);
@@ -638,248 +561,6 @@ const playAudio = async (text) => {
     } finally {
       setIsAiGenerating(false);
     }
-  };
-
-  const renderVerbTableModal = () => {
-    const filteredVerbs = verbTableData.filter(v => 
-      v.baseJa.includes(verbSearchQuery) || 
-      v.zh.includes(verbSearchQuery) || 
-      getHiraganaVersion(v.baseJa).includes(verbSearchQuery)
-    );
-
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-4xl shadow-2xl relative animate-in zoom-in-95 flex flex-col max-h-[85vh]" style={{ color: '#1f2937' }}>
-          <button onClick={() => setIsVerbTableOpen(false)} className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors">
-            <X size={20} />
-          </button>
-          <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-rose-700">
-            <BookText size={22} className="text-rose-500" /> 動詞變化字典
-          </h3>
-          <p className="text-sm text-gray-500 mb-4 leading-relaxed">搜尋日文或中文，快速查閱各種動詞型態。點擊發音按鈕即可聆聽。</p>
-          
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text" 
-                value={verbSearchQuery} 
-                onChange={(e) => setVerbSearchQuery(e.target.value)} 
-                placeholder="輸入關鍵字搜尋... (例如: 寝る, 睡覺)" 
-                className="w-full pl-10 p-3 border-2 border-rose-100 rounded-xl outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-500/10 transition-all text-gray-800 font-medium" 
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-auto custom-scrollbar rounded-xl border border-gray-200">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50 sticky top-0 z-10">
-                <tr>
-                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">中文意思</th>
-                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">原形</th>
-                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">ます形</th>
-                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">て形</th>
-                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">た形</th>
-                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">ない形</th>
-                  <th className="p-3 border-b border-gray-200 font-semibold text-gray-600">其他</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredVerbs.length > 0 ? filteredVerbs.map((verb, idx) => (
-                  <tr key={idx} className="hover:bg-rose-50/30 transition-colors">
-                    <td className="p-3 font-medium text-gray-800">{verb.zh}</td>
-                    {[
-                      { key: '原形', val: verb.forms['原形'] },
-                      { key: 'ます形', val: verb.forms['ます形'] },
-                      { key: 'て形', val: verb.forms['て形'] },
-                      { key: 'た形', val: verb.forms['た形'] },
-                      { key: 'ない形', val: verb.forms['ない形'] }
-                    ].map(f => (
-                      <td key={f.key} className="p-3">
-                        {f.val && (
-                          <div className="flex items-center gap-1 group">
-                            <span>{f.val}</span>
-                            <button onClick={() => playAudio(f.val)} disabled={isTtsLoading} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-emerald-600 transition-opacity">
-                              <Volume2 size={14} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    ))}
-                    <td className="p-3 text-sm text-gray-500">
-                      {['意向形', 'ば形', '命令形'].map(key => verb.forms[key] ? `${verb.forms[key]}` : null).filter(Boolean).join(', ')}
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={7} className="p-8 text-center text-gray-400">找不到符合的動詞</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-6 bg-rose-50 border border-rose-200 rounded-xl p-6 text-sm text-gray-700">
-            <h4 className="text-rose-800 font-bold text-lg mb-2">📖 日語動詞活用形說明</h4>
-            <p className="mb-4 leading-relaxed">
-              「未然、連用、終止、連體、假定、命令」是日語文法中動詞、形容詞的活用形（變化型態），用來連接不同的助詞、助動詞或結尾。透過這些變化，詞彙能表達否定、過去、假設等語意。
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
-                <thead className="bg-rose-100/50">
-                  <tr>
-                    <th className="p-3 border-b border-rose-100 font-semibold whitespace-nowrap">變化形式</th>
-                    <th className="p-3 border-b border-rose-100 font-semibold min-w-[200px]">主要功能與意義</th>
-                    <th className="p-3 border-b border-rose-100 font-semibold">常見接續的平假名</th>
-                    <th className="p-3 border-b border-rose-100 font-semibold whitespace-nowrap">實例 (以「書く」為例)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-rose-50">
-                  <tr className="hover:bg-rose-50/50">
-                    <td className="p-3 font-bold text-rose-700">未然形</td>
-                    <td className="p-3">尚未發生。用於否定、意志、被動、使役。</td>
-                    <td className="p-3 font-mono text-emerald-600">ない、う、せる、られる</td>
-                    <td className="p-3">書かない、書こう</td>
-                  </tr>
-                  <tr className="hover:bg-rose-50/50">
-                    <td className="p-3 font-bold text-rose-700">連用形</td>
-                    <td className="p-3">連接其他用言或助詞。用於過去式、肯定中止。</td>
-                    <td className="p-3 font-mono text-emerald-600">ます、て、た</td>
-                    <td className="p-3">書きます、書いて</td>
-                  </tr>
-                  <tr className="hover:bg-rose-50/50">
-                    <td className="p-3 font-bold text-rose-700">終止形</td>
-                    <td className="p-3">結束句子。為字典中的基本型態（辭書形）。</td>
-                    <td className="p-3 font-mono text-emerald-600">句尾、終助詞</td>
-                    <td className="p-3">書く</td>
-                  </tr>
-                  <tr className="hover:bg-rose-50/50">
-                    <td className="p-3 font-bold text-rose-700">連體形</td>
-                    <td className="p-3">連接「體言」（名詞），用來修飾名詞。</td>
-                    <td className="p-3 font-mono text-emerald-600">とき、もの、こと</td>
-                    <td className="p-3">書くとき</td>
-                  </tr>
-                  <tr className="hover:bg-rose-50/50">
-                    <td className="p-3 font-bold text-rose-700">假定形</td>
-                    <td className="p-3">表示條件或假設（如果～的話）。</td>
-                    <td className="p-3 font-mono text-emerald-600">ば</td>
-                    <td className="p-3">書けば</td>
-                  </tr>
-                  <tr className="hover:bg-rose-50/50">
-                    <td className="p-3 font-bold text-rose-700">命令形</td>
-                    <td className="p-3">直接下達命令（快點～）。</td>
-                    <td className="p-3 font-mono text-emerald-600">句尾</td>
-                    <td className="p-3">書け</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6 text-sm text-gray-700">
-            <h4 className="text-blue-800 font-bold text-lg mb-2">💡 核心詞性與活用類別 (カ變、サ變、形容詞、名詞)</h4>
-            <p className="mb-4 leading-relaxed">
-              除了常見的動詞（五段、上一段、下一段）外，日語中還有以下幾種核心的詞性與活用類別，它們在接續六大活用形時有著不同的變化規則：
-            </p>
-            <div className="grid sm:grid-cols-3 gap-4 mb-4">
-              <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-100">
-                <span className="font-bold text-blue-700 block mb-1">1. 不規則動詞</span>
-                <ul className="list-disc list-inside text-xs space-y-1 text-gray-600">
-                  <li><span className="font-semibold text-gray-800">カ變動詞</span>：全日語只有「来る（くる）」一個詞。</li>
-                  <li><span className="font-semibold text-gray-800">サ變動詞</span>：以「する」結尾的動詞（如：勉強する）。</li>
-                </ul>
-              </div>
-              <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-100">
-                <span className="font-bold text-blue-700 block mb-1">2. 形容詞</span>
-                <ul className="list-disc list-inside text-xs space-y-1 text-gray-600">
-                  <li><span className="font-semibold text-gray-800">い形容詞</span>：語尾為「い」（如：高い）。</li>
-                  <li><span className="font-semibold text-gray-800">な形容詞</span>：修飾名詞時加「な」，語尾常接「だ/です」（如：綺麗な）。</li>
-                </ul>
-              </div>
-              <div className="bg-white p-3 rounded-lg shadow-sm border border-blue-100">
-                <span className="font-bold text-blue-700 block mb-1">3. 名詞</span>
-                <ul className="list-disc list-inside text-xs space-y-1 text-gray-600">
-                  <li>名詞本身不變化，但接續助動詞（如 だ）時的變化與「な形容詞」高度相似。</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto mb-4">
-              <table className="w-full text-left border-collapse bg-white rounded-lg overflow-hidden shadow-sm text-xs">
-                <thead className="bg-blue-100/50">
-                  <tr>
-                    <th className="p-3 border-b border-blue-100 font-semibold whitespace-nowrap">活用形</th>
-                    <th className="p-3 border-b border-blue-100 font-semibold text-emerald-700">カ變 (来る)</th>
-                    <th className="p-3 border-b border-blue-100 font-semibold text-indigo-700">サ變 (する)</th>
-                    <th className="p-3 border-b border-blue-100 font-semibold text-orange-700">い形容詞 (高い)</th>
-                    <th className="p-3 border-b border-blue-100 font-semibold text-purple-700">な形容詞 (綺麗)</th>
-                    <th className="p-3 border-b border-blue-100 font-semibold text-rose-700">名詞 (學生)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-blue-50">
-                  <tr className="hover:bg-blue-50/50">
-                    <td className="p-3 font-bold text-blue-700">未然形</td>
-                    <td className="p-3">こ(ない)<br/>こよ(う)</td>
-                    <td className="p-3">し(ない) / さ(れる)<br/>せ(ず)</td>
-                    <td className="p-3">高かろ(う)</td>
-                    <td className="p-3">綺麗だろ(う)</td>
-                    <td className="p-3">學生だろ(う)</td>
-                  </tr>
-                  <tr className="hover:bg-blue-50/50">
-                    <td className="p-3 font-bold text-blue-700">連用形</td>
-                    <td className="p-3">き(ます)<br/>き(て / た)</td>
-                    <td className="p-3">し(ます)<br/>し(て / た)</td>
-                    <td className="p-3">高く(なる)<br/>高かっ(た)</td>
-                    <td className="p-3">綺麗で / 綺麗に<br/>綺麗だっ(た)</td>
-                    <td className="p-3">學生で / 學生に<br/>學生だっ(た)</td>
-                  </tr>
-                  <tr className="hover:bg-blue-50/50">
-                    <td className="p-3 font-bold text-blue-700">終止形</td>
-                    <td className="p-3">くる</td>
-                    <td className="p-3">する</td>
-                    <td className="p-3">高い</td>
-                    <td className="p-3">綺麗だ</td>
-                    <td className="p-3">學生だ</td>
-                  </tr>
-                  <tr className="hover:bg-blue-50/50">
-                    <td className="p-3 font-bold text-blue-700">連體形</td>
-                    <td className="p-3">くる(とき)</td>
-                    <td className="p-3">する(とき)</td>
-                    <td className="p-3">高い(本)</td>
-                    <td className="p-3">綺麗な(人)</td>
-                    <td className="p-3">學生の(本)<br/>學生な(ので)</td>
-                  </tr>
-                  <tr className="hover:bg-blue-50/50">
-                    <td className="p-3 font-bold text-blue-700">假定形</td>
-                    <td className="p-3">くれ(ば)</td>
-                    <td className="p-3">すれ(ば)</td>
-                    <td className="p-3">高けれ(ば)</td>
-                    <td className="p-3">綺麗なら(ば)</td>
-                    <td className="p-3">學生なら(ば)</td>
-                  </tr>
-                  <tr className="hover:bg-blue-50/50">
-                    <td className="p-3 font-bold text-blue-700">命令形</td>
-                    <td className="p-3">こい</td>
-                    <td className="p-3">しろ / せよ</td>
-                    <td className="p-3 text-gray-400 italic">(無)</td>
-                    <td className="p-3 text-gray-400 italic">(無)</td>
-                    <td className="p-3 text-gray-400 italic">(無)</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mt-4 text-xs text-yellow-800">
-              <span className="font-bold flex items-center gap-1 mb-1"><Sparkles size={14} /> 關鍵學習痛點提示：</span>
-              <ol className="list-decimal list-inside space-y-1 ml-1">
-                <li><strong>カ變（来る）的讀音</strong>：未然讀 ko，連用讀 ki，終止/連體讀 kuru，假定讀 kure，命令讀 koi。漢字雖同為「來」，但平假名讀音完全不同，極易混淆。</li>
-                <li><strong>な形容詞與名詞的連體形差異</strong>：修飾名詞時，な形容詞用「な」（綺麗な花）；名詞則用「の」（學生の本）。</li>
-              </ol>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    );
   };
 
   const renderSettingsModal = () => (
@@ -996,7 +677,7 @@ const playAudio = async (text) => {
       {import.meta.env.DEV && (
         <div className="fixed top-0 left-0 w-full bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-mono py-1.5 px-4 text-center z-50 flex justify-between shadow-sm">
           <span className="font-bold flex items-center gap-2">🛠️ Local Development Server</span>
-          <span className="opacity-100 font-bold tracking-wide">開發暗號：動詞各類別活用大表 (v1.4.2)</span>
+          <span className="opacity-100 font-bold tracking-wide">開發暗號：獨立頁面化 (v1.5.0)</span>
         </div>
       )}
       <div
@@ -1032,93 +713,39 @@ const playAudio = async (text) => {
         {isFullscreen ? <Minimize size={26} /> : <Maximize size={26} />}
       </button>
 
-      {isVerbTableOpen && renderVerbTableModal()}
       {isSettingsOpen && renderSettingsModal()}
 
-      {showAiModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative animate-in zoom-in-95" style={{ color: '#1f2937' }}>
-            <button onClick={() => setShowAiModal(false)} className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full disabled:opacity-50 transition-colors" disabled={isAiGenerating}>
-              <X size={20} />
-            </button>
-            <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-purple-700">
-              <Sparkles size={22} className="text-purple-500" /> AI 情境擴充出題
-            </h3>
-            <p className="text-sm text-gray-500 mb-5 leading-relaxed">想練習什麼特別的情境？輸入關鍵字，AI 老師馬上為你量身打造專屬打字題庫！</p>
-            <input type="text" value={themeInput} onChange={(e) => setThemeInput(e.target.value)} disabled={isAiGenerating} placeholder="例如：居酒屋點餐、動漫必殺技..." className="w-full p-3 border-2 border-purple-100 rounded-xl outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10 mb-5 transition-all text-gray-800 font-medium" />
-            <button onClick={handleGenerateAiQuiz} disabled={!themeInput.trim() || isAiGenerating} className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-all flex justify-center items-center gap-2 disabled:opacity-60 shadow-lg shadow-purple-200">
-              {isAiGenerating ? <><Loader2 className="animate-spin" size={18} /> 題庫生成中...</> : <><Sparkles size={18} /> 開始生成並測驗</>}
-            </button>
-          </div>
-        </div>
+      {screen === 'verb_dict' && (
+        <VerbDictPage
+          verbTableData={verbTableData}
+          playAudio={playAudio}
+          isTtsLoading={isTtsLoading}
+          onBack={() => setScreen('home')}
+        />
       )}
 
-      {isSearchOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl relative animate-in zoom-in-95 max-h-[80vh] flex flex-col" style={{ color: '#1f2937' }}>
-            <button onClick={() => setIsSearchOpen(false)} className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors">
-              <X size={20} />
-            </button>
-            <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-blue-700">
-              <Search size={22} className="text-blue-500" /> 智慧語意搜尋
-            </h3>
-            <p className="text-sm text-gray-500 mb-5 leading-relaxed">
-              輸入概念或情境（例如：「出國會搭的交通工具」），AI 會為您找出最相關的詞彙！
-              {isExtractorLoading && <span className="block mt-2 text-amber-500 font-medium">⏳ 正在載入語意模型引擎，請稍候... (約 30MB)</span>}
-            </p>
-            <form onSubmit={handleSemanticSearch} className="mb-4">
-              <div className="flex gap-2">
-                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} disabled={isSearching || isExtractorLoading} placeholder="輸入你想找的語意..." className="flex-1 p-3 border-2 border-blue-100 rounded-xl outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all text-gray-800 font-medium" />
-                <button type="submit" disabled={!searchQuery.trim() || isSearching || isExtractorLoading} className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 rounded-xl font-bold hover:opacity-90 transition-all flex justify-center items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-200">
-                  {isSearching ? <Loader2 className="animate-spin" size={18} /> : '搜尋'}
-                </button>
-              </div>
-            </form>
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-[200px]">
-              {searchResults.length > 0 ? (
-                <div className="space-y-3">
-                  {searchResults.map((item, idx) => (
-                    <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-2">
-                      <div className="flex justify-between items-start">
-                        <span className="font-bold text-lg text-gray-800">{Array.isArray(item.ja) ? item.ja.join(', ') : item.ja}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-mono">相似度: {(item.score * 100).toFixed(1)}%</span>
-                        </div>
-                      </div>
-                      <span className="text-gray-600 font-medium mb-1">{item.zh}</span>
-                      
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => playAudio(item.ja[0])} disabled={isTtsLoading} className="text-gray-500 hover:text-emerald-600 p-1.5 bg-gray-200 hover:bg-emerald-100 rounded-full transition-colors" title="發音">
-                          <Volume2 size={16} />
-                        </button>
-                        <button onClick={() => fetchSearchItemInsight(item, idx)} disabled={loadingSearchInsightIdx === idx} className="text-gray-500 hover:text-indigo-600 px-2 py-1 bg-gray-200 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-1" title="AI 解析">
-                          {loadingSearchInsightIdx === idx ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                          <span className="text-xs font-medium">解析</span>
-                        </button>
-                      </div>
-                      
-                      {searchInsights[idx] && (
-                        <div className="mt-2 bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 text-sm animate-in fade-in slide-in-from-top-2">
-                          <p className="text-indigo-900 mb-2 leading-relaxed font-medium">{searchInsights[idx].explanation}</p>
-                          <div className="space-y-2">
-                            {searchInsights[idx].examples.map((ex, i) => (
-                              <div key={i} className="pl-3 border-l-2 border-indigo-300">
-                                <p className="text-gray-800 font-medium">{ex.ja} <span className="text-xs text-gray-500 font-normal">({ex.kana})</span></p>
-                                <p className="text-gray-600 mt-0.5">{ex.zh}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400">沒有符合的結果，請試試其他關鍵字</div>
-              )}
-            </div>
-          </div>
-        </div>
+      {screen === 'ai_quiz' && (
+        <AiQuizPage
+          isAiGenerating={isAiGenerating}
+          onGenerate={handleGenerateAiQuiz}
+          onBack={() => setScreen('home')}
+        />
+      )}
+
+      {screen === 'search' && (
+        <SearchPage
+          searchExtractor={searchExtractor}
+          isExtractorLoading={isExtractorLoading}
+          playAudio={playAudio}
+          isTtsLoading={isTtsLoading}
+          apiKey={apiKey}
+          textModel={textModel}
+          showToast={(msg, duration = 4000) => {
+            setToastMsg(msg);
+            setTimeout(() => setToastMsg(''), duration);
+          }}
+          onBack={() => setScreen('home')}
+        />
       )}
 
       {screen === 'home' && (
@@ -1134,19 +761,19 @@ const playAudio = async (text) => {
                 <h3 className="text-xl font-bold text-emerald-800 mb-1">開始自訂測驗</h3>
                 <p className="text-emerald-600/80 text-sm">選擇章節、題型與題數</p>
               </button>
-              <button onClick={() => setShowAiModal(true)} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-purple-100 hover:border-purple-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
+              <button onClick={() => setScreen('ai_quiz')} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-purple-100 hover:border-purple-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-indigo-50 opacity-50 pointer-events-none"></div>
                 <Sparkles className="text-purple-500 mb-3 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300 relative z-10" size={32} />
                 <h3 className="text-xl font-bold text-purple-800 mb-1 relative z-10">✨ AI 智能情境特訓</h3>
                 <p className="text-purple-600/80 text-sm relative z-10">自訂情境，AI 即時為你擴充出題</p>
               </button>
-              <button onClick={() => setIsSearchOpen(true)} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-blue-100 hover:border-blue-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
+              <button onClick={() => setScreen('search')} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-blue-100 hover:border-blue-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 opacity-50 pointer-events-none"></div>
                 <Search className="text-blue-500 mb-3 group-hover:scale-110 transition-transform duration-300 relative z-10" size={32} />
                 <h3 className="text-xl font-bold text-blue-800 mb-1 relative z-10">🔍 智慧語意搜尋</h3>
                 <p className="text-blue-600/80 text-sm relative z-10">用自然語言搜尋相關詞彙</p>
               </button>
-              <button onClick={() => setIsVerbTableOpen(true)} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-rose-100 hover:border-rose-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
+              <button onClick={() => setScreen('verb_dict')} className="group flex flex-col items-center p-6 bg-white/95 border-2 border-rose-100 hover:border-rose-400 rounded-2xl transition-all hover:-translate-y-1 relative overflow-hidden text-gray-800">
                 <div className="absolute inset-0 bg-gradient-to-br from-rose-50 to-pink-50 opacity-50 pointer-events-none"></div>
                 <BookText className="text-rose-500 mb-3 group-hover:scale-110 transition-transform duration-300 relative z-10" size={32} />
                 <h3 className="text-xl font-bold text-rose-800 mb-1 relative z-10">📖 動詞變化字典</h3>
@@ -1397,25 +1024,4 @@ const playAudio = async (text) => {
     </div>
     </>
   );
-const verbTableData = useMemo(() => {
-    const verbs = QUIZ_DATA.filter(q => q.chapter === 'verb_conjugation');
-    const groups = {};
-    let currentVerb = null;
-    verbs.forEach(v => {
-      const isBase = v.zh.includes('(原形)');
-      const baseMeaning = v.zh.replace(/\s*\(.*\)/, '');
-      if (isBase) {
-        currentVerb = v.ja[0];
-        groups[currentVerb] = { zh: baseMeaning, forms: {} };
-      }
-      if (currentVerb) {
-        const formMatch = v.zh.match(/\((.*?)\)/);
-        if (formMatch) {
-          groups[currentVerb].forms[formMatch[1]] = v.ja[0];
-        }
-      }
-    });
-    return Object.entries(groups).map(([baseJa, data]) => ({ baseJa, zh: data.zh, forms: data.forms }));
-  }, []);
-
-  }
+}

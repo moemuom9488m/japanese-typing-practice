@@ -1254,4 +1254,325 @@ const API_MODELS = {
   ]
 };
 
+export const VERB_TABLE_QUIZ_DATA = [
+  {
+    word: '書く',
+    type: '五段',
+    meaning: '寫',
+    conjugations: {
+      mizen: ['書かない', '書こう'],
+      renyo_base: ['書きます'],
+      renyo_onbin: ['書いて', '書いた'],
+      shushi: ['書く'],
+      rentai: ['書く'],
+      katei: ['書けば'],
+      meirei: ['書け']
+    }
+  },
+  {
+    word: '読む',
+    type: '五段',
+    meaning: '閱讀',
+    conjugations: {
+      mizen: ['読まない', '読もう'],
+      renyo_base: ['読みます'],
+      renyo_onbin: ['読んで', '読んだ'],
+      shushi: ['読む'],
+      rentai: ['読む'],
+      katei: ['読めば'],
+      meirei: ['読め']
+    }
+  },
+  {
+    word: '買う',
+    type: '五段',
+    meaning: '買',
+    conjugations: {
+      mizen: ['買わない', '買おう'],
+      renyo_base: ['買います'],
+      renyo_onbin: ['買って', '買った'],
+      shushi: ['買う'],
+      rentai: ['買う'],
+      katei: ['買えば'],
+      meirei: ['買え']
+    }
+  },
+  {
+    word: '食べる',
+    type: '上一段',
+    meaning: '吃',
+    conjugations: {
+      mizen: ['食べない', '食べよう'],
+      renyo_base: ['食べます'],
+      renyo_onbin: ['食べて', '食べた'],
+      shushi: ['食べる'],
+      rentai: ['食べる'],
+      katei: ['食べれば'],
+      meirei: ['食べろ', '食べよ']
+    }
+  },
+  {
+    word: 'する',
+    type: 'サ變',
+    meaning: '做',
+    conjugations: {
+      mizen: ['しない', 'しよう'],
+      renyo_base: ['します'],
+      renyo_onbin: ['して', 'した'],
+      shushi: ['する'],
+      rentai: ['する'],
+      katei: ['すれば'],
+      meirei: ['しろ', 'せよ']
+    }
+  },
+  {
+    word: '着る', type: '上一段', meaning: '穿(上半身)',
+    conjugations: { mizen: ['着ない', '着よう'], renyo_base: ['着ます'], renyo_onbin: ['着て', '着た'], shushi: ['着る'], rentai: ['着る'], katei: ['着れば'], meirei: ['着ろ', '着よ'] }
+  },
+  {
+    word: '似る', type: '上一段', meaning: '相似',
+    conjugations: { mizen: ['似ない', '似よう'], renyo_base: ['似ます'], renyo_onbin: ['似て', '似た'], shushi: ['似る'], rentai: ['似る'], katei: ['似れば'], meirei: ['似ろ', '似よ'] }
+  },
+  {
+    word: '煮る', type: '上一段', meaning: '燉煮',
+    conjugations: { mizen: ['煮ない', '煮よう'], renyo_base: ['煮ます'], renyo_onbin: ['煮て', '煮た'], shushi: ['煮る'], rentai: ['煮る'], katei: ['煮れば'], meirei: ['煮ろ', '煮よ'] }
+  },
+  {
+    word: '見る', type: '上一段', meaning: '看',
+    conjugations: { mizen: ['見ない', '見よう'], renyo_base: ['見ます'], renyo_onbin: ['見て', '見た'], shushi: ['見る'], rentai: ['見る'], katei: ['見れば'], meirei: ['見ろ', '見よ'] }
+  },
+  {
+    word: '居る', type: '上一段', meaning: '在、存在',
+    conjugations: { mizen: ['居ない', '居よう'], renyo_base: ['居ます'], renyo_onbin: ['居て', '居た'], shushi: ['居る'], rentai: ['居る'], katei: ['居れば'], meirei: ['居ろ', '居よ'] }
+  },
+  {
+    word: '射る', type: '上一段', meaning: '射(箭)',
+    conjugations: { mizen: ['射ない', '射よう'], renyo_base: ['射ます'], renyo_onbin: ['射て', '射た'], shushi: ['射る'], rentai: ['射る'], katei: ['射れば'], meirei: ['射ろ', '射よ'] }
+  },
+  {
+    word: '鋳る', type: '上一段', meaning: '鑄造',
+    conjugations: { mizen: ['鋳ない', '鋳よう'], renyo_base: ['鋳ます'], renyo_onbin: ['鋳て', '鋳た'], shushi: ['鋳る'], rentai: ['鋳る'], katei: ['鋳れば'], meirei: ['鋳ろ', '鋳よ'] }
+  },
+  {
+    word: '率いる', type: '上一段', meaning: '帶領',
+    conjugations: { mizen: ['率いない', '率いよう'], renyo_base: ['率います'], renyo_onbin: ['率いて', '率いた'], shushi: ['率いる'], rentai: ['率いる'], katei: ['率いれば'], meirei: ['率いろ', '率いよ'] }
+  },
+  {
+    word: '寝る', type: '下一段', meaning: '睡覺',
+    conjugations: { mizen: ['寝ない', '寝よう'], renyo_base: ['寝ます'], renyo_onbin: ['寝て', '寝た'], shushi: ['寝る'], rentai: ['寝る'], katei: ['寝れば'], meirei: ['寝ろ', '寝よ'] }
+  },
+  {
+    word: '出る', type: '下一段', meaning: '出去、出來',
+    conjugations: { mizen: ['出ない', '出よう'], renyo_base: ['出ます'], renyo_onbin: ['出て', '出た'], shushi: ['出る'], rentai: ['出る'], katei: ['出れば'], meirei: ['出ろ', '出よ'] }
+  },
+  {
+    word: '経る', type: '下一段', meaning: '經過',
+    conjugations: { mizen: ['経ない', '経よう'], renyo_base: ['経ます'], renyo_onbin: ['経て', '経た'], shushi: ['経る'], rentai: ['経る'], katei: ['経れば'], meirei: ['経ろ', '経よ'] }
+  },
+  {
+    word: '得る', type: '下一段', meaning: '得到、獲得',
+    conjugations: { mizen: ['得ない', '得よう'], renyo_base: ['得ます'], renyo_onbin: ['得て', '得た'], shushi: ['得る'], rentai: ['得る'], katei: ['得れば'], meirei: ['得ろ', '得よ'] }
+  },
+  {
+    word: '来る', type: 'カ變', meaning: '來',
+    conjugations: { mizen: ['来ない', '来よう'], renyo_base: ['来ます'], renyo_onbin: ['来て', '来た'], shushi: ['来る'], rentai: ['来る'], katei: ['来れば'], meirei: ['来い'] }
+  },
+  {
+    word: 'する', type: 'サ變', meaning: '做',
+    conjugations: { mizen: ['しない', 'しよう', 'され', 'させ'], renyo_base: ['します'], renyo_onbin: ['して', 'した'], shushi: ['する'], rentai: ['する'], katei: ['すれば'], meirei: ['しろ', 'せよ'] }
+  },
+  {
+    word: '勉強する', type: 'サ變', meaning: '讀書、學習',
+    conjugations: { mizen: ['勉強しない', '勉強しよう'], renyo_base: ['勉強します'], renyo_onbin: ['勉強して', '勉強した'], shushi: ['勉強する'], rentai: ['勉強する'], katei: ['勉強すれば'], meirei: ['勉強しろ', '勉強せよ'] }
+  },
+  {
+    word: '高い', type: 'い形容詞', meaning: '高的、貴的',
+    conjugations: { mizen: ['高かろう'], renyo_base: ['高く', '高かった'], renyo_onbin: [], shushi: ['高い'], rentai: ['高い'], katei: ['高ければ'], meirei: [] }
+  },
+  {
+    word: '綺麗だ', type: 'な形容詞', meaning: '美麗的、乾淨的',
+    conjugations: { mizen: ['綺麗だろう'], renyo_base: ['綺麗で', '綺麗に', '綺麗だった'], renyo_onbin: [], shushi: ['綺麗だ'], rentai: ['綺麗な'], katei: ['綺麗ならば'], meirei: [] }
+  },
+  {
+    word: '学生だ', type: '名詞', meaning: '學生',
+    conjugations: { mizen: ['学生だろう'], renyo_base: ['学生で', '学生に', '学生だった'], renyo_onbin: [], shushi: ['学生だ'], rentai: ['学生の', '学生な'], katei: ['学生ならば'], meirei: [] }
+  },
+  {
+    word: '待つ', type: '五段', meaning: '等待',
+    conjugations: { mizen: ['待たない', '待とう'], renyo_base: ['待ちます'], renyo_onbin: ['待って', '待った'], shushi: ['待つ'], rentai: ['待つ'], katei: ['待てば'], meirei: ['待て'] }
+  },
+  {
+    word: '限る', type: '五段', meaning: '限制、只限',
+    conjugations: { mizen: ['限らない', '限ろう'], renyo_base: ['限ります'], renyo_onbin: ['限って', '限った'], shushi: ['限る'], rentai: ['限る'], katei: ['限れば'], meirei: ['限れ'] }
+  },
+  {
+    word: '笑う', type: '五段', meaning: '笑',
+    conjugations: { mizen: ['笑わない', '笑おう'], renyo_base: ['笑います'], renyo_onbin: ['笑って', '笑った'], shushi: ['笑う'], rentai: ['笑う'], katei: ['笑えば'], meirei: ['笑え'] }
+  },
+  {
+    word: '焼く', type: '五段', meaning: '燒、烤',
+    conjugations: { mizen: ['焼かない', '焼こう'], renyo_base: ['焼きます'], renyo_onbin: ['焼いて', '焼いた'], shushi: ['焼く'], rentai: ['焼く'], katei: ['焼けば'], meirei: ['焼け'] }
+  },
+  {
+    word: '急ぐ', type: '五段', meaning: '急忙',
+    conjugations: { mizen: ['急がない', '急ごう'], renyo_base: ['急ぎます'], renyo_onbin: ['急いで', '急いだ'], shushi: ['急ぐ'], rentai: ['急ぐ'], katei: ['急げば'], meirei: ['急げ'] }
+  },
+  {
+    word: '死ぬ', type: '五段', meaning: '死',
+    conjugations: { mizen: ['死なない', '死のう'], renyo_base: ['死にます'], renyo_onbin: ['死んで', '死んだ'], shushi: ['死ぬ'], rentai: ['死ぬ'], katei: ['死ねば'], meirei: ['死ね'] }
+  },
+  {
+    word: '住む', type: '五段', meaning: '居住',
+    conjugations: { mizen: ['住まない', '住もう'], renyo_base: ['住みます'], renyo_onbin: ['住んで', '住んだ'], shushi: ['住む'], rentai: ['住む'], katei: ['住めば'], meirei: ['住め'] }
+  },
+  {
+    word: '呼ぶ', type: '五段', meaning: '呼叫',
+    conjugations: { mizen: ['呼ばない', '呼ぼう'], renyo_base: ['呼びます'], renyo_onbin: ['呼んで', '呼んだ'], shushi: ['呼ぶ'], rentai: ['呼ぶ'], katei: ['呼べば'], meirei: ['呼べ'] }
+  },
+  {
+    word: '探す', type: '五段', meaning: '尋找',
+    conjugations: { mizen: ['探さない', '探そう'], renyo_base: ['探します'], renyo_onbin: ['探して', '探した'], shushi: ['探す'], rentai: ['探す'], katei: ['探せば'], meirei: ['探せ'] }
+  },
+  {
+    word: '行く', type: '五段', meaning: '去',
+    conjugations: { mizen: ['行かない', '行こう'], renyo_base: ['行きます'], renyo_onbin: ['行って', '行った'], shushi: ['行く'], rentai: ['行く'], katei: ['行けば'], meirei: ['行け'] }
+  },
+  {
+    word: '話す', type: '五段', meaning: '說話',
+    conjugations: { mizen: ['話さない', '話そう'], renyo_base: ['話します'], renyo_onbin: ['話して', '話した'], shushi: ['話す'], rentai: ['話す'], katei: ['話せば'], meirei: ['話せ'] }
+  }
+,
+  {
+    word: '在る', type: '五段', meaning: '在、存在(無生命)',
+    conjugations: {mizen:['在らない','在ろう'],renyo_base:['在ります'],renyo_onbin:['在って','在った'],shushi:['在る'],rentai:['在る'],katei:['在れば'],meirei:['在れ']}
+  },
+  {
+    word: '歌う', type: '五段', meaning: '唱歌',
+    conjugations: {mizen:['歌わない','歌おう'],renyo_base:['歌います'],renyo_onbin:['歌って','歌った'],shushi:['歌う'],rentai:['歌う'],katei:['歌えば'],meirei:['歌え']}
+  },
+  {
+    word: '休む', type: '五段', meaning: '休息',
+    conjugations: {mizen:['休まない','休もう'],renyo_base:['休みます'],renyo_onbin:['休んで','休んだ'],shushi:['休む'],rentai:['休む'],katei:['休めば'],meirei:['休め']}
+  },
+  {
+    word: '聞く', type: '五段', meaning: '聽',
+    conjugations: {mizen:['聞かない','聞こう'],renyo_base:['聞きます'],renyo_onbin:['聞いて','聞いた'],shushi:['聞く'],rentai:['聞く'],katei:['聞けば'],meirei:['聞け']}
+  },
+  {
+    word: '勝つ', type: '五段', meaning: '贏、獲勝',
+    conjugations: {mizen:['勝たない','勝とう'],renyo_base:['勝ちます'],renyo_onbin:['勝って','勝った'],shushi:['勝つ'],rentai:['勝つ'],katei:['勝てば'],meirei:['勝て']}
+  },
+  {
+    word: 'かける', type: '下一段', meaning: '掛、戴上',
+    conjugations: {mizen:['かけない','かけよう'],renyo_base:['かけます'],renyo_onbin:['かけて','かけた'],shushi:['かける'],rentai:['かける'],katei:['かければ'],meirei:['かけろ','かけよ']}
+  },
+  {
+    word: '借りる', type: '上一段', meaning: '借入',
+    conjugations: {mizen:['借りない','借りよう'],renyo_base:['借ります'],renyo_onbin:['借りて','借りた'],shushi:['借りる'],rentai:['借りる'],katei:['借りれば'],meirei:['借りろ','借りよ']}
+  },
+  {
+    word: '要る', type: '五段', meaning: '需要',
+    conjugations: {mizen:['要らない','要ろう'],renyo_base:['要ります'],renyo_onbin:['要って','要った'],shushi:['要る'],rentai:['要る'],katei:['要れば'],meirei:['要れ']}
+  },
+  {
+    word: '教える', type: '下一段', meaning: '教導',
+    conjugations: {mizen:['教えない','教えよう'],renyo_base:['教えます'],renyo_onbin:['教えて','教えた'],shushi:['教える'],rentai:['教える'],katei:['教えれば'],meirei:['教えろ','教えよ']}
+  },
+  {
+    word: '遊ぶ', type: '五段', meaning: '遊玩',
+    conjugations: {mizen:['遊ばない','遊ぼう'],renyo_base:['遊びます'],renyo_onbin:['遊んで','遊んだ'],shushi:['遊ぶ'],rentai:['遊ぶ'],katei:['遊べば'],meirei:['遊べ']}
+  },
+  {
+    word: '用いる', type: '上一段', meaning: '使用',
+    conjugations: {mizen:['用いない','用いよう'],renyo_base:['用います'],renyo_onbin:['用いて','用いた'],shushi:['用いる'],rentai:['用いる'],katei:['用いれば'],meirei:['用いろ','用いよ']}
+  },
+  {
+    word: '飲む', type: '五段', meaning: '喝',
+    conjugations: {mizen:['飲まない','飲もう'],renyo_base:['飲みます'],renyo_onbin:['飲んで','飲んだ'],shushi:['飲む'],rentai:['飲む'],katei:['飲めば'],meirei:['飲め']}
+  },
+  {
+    word: '終わる', type: '五段', meaning: '結束',
+    conjugations: {mizen:['終わらない','終わろう'],renyo_base:['終わります'],renyo_onbin:['終わって','終わった'],shushi:['終わる'],rentai:['終わる'],katei:['終われば'],meirei:['終われ']}
+  },
+  {
+    word: '貸す', type: '五段', meaning: '借出',
+    conjugations: {mizen:['貸さない','貸そう'],renyo_base:['貸します'],renyo_onbin:['貸して','貸した'],shushi:['貸す'],rentai:['貸す'],katei:['貸せば'],meirei:['貸せ']}
+  },
+  {
+    word: '為る', type: 'サ變', meaning: '做',
+    conjugations: {mizen:['しない','しよう'],renyo_base:['します'],renyo_onbin:['して','した'],shushi:['する'],rentai:['する'],katei:['すれば'],meirei:['しろ','せよ']}
+  },
+  {
+    word: '入る', type: '五段', meaning: '進入',
+    conjugations: {mizen:['入らない','入ろう'],renyo_base:['入ります'],renyo_onbin:['入って','入った'],shushi:['入る'],rentai:['入る'],katei:['入れば'],meirei:['入れ']}
+  },
+  {
+    word: '降りる', type: '上一段', meaning: '降落、下車',
+    conjugations: {mizen:['降りない','降りよう'],renyo_base:['降ります'],renyo_onbin:['降りて','降りた'],shushi:['降りる'],rentai:['降りる'],katei:['降りれば'],meirei:['降りろ','降りよ']}
+  },
+  {
+    word: '疲れる', type: '下一段', meaning: '疲倦',
+    conjugations: {mizen:['疲れない','疲れよう'],renyo_base:['疲れます'],renyo_onbin:['疲れて','疲れた'],shushi:['疲れる'],rentai:['疲れる'],katei:['疲れれば'],meirei:['疲れろ','疲れよ']}
+  },
+  {
+    word: '良い', type: 'い形容詞', meaning: '好的',
+    conjugations: {mizen:['良かろう'],renyo_base:['良く','良かった'],renyo_onbin:[],shushi:['良い'],rentai:['良い'],katei:['良ければ'],meirei:[]}
+  },
+  {
+    word: '美味しい', type: 'い形容詞', meaning: '好吃的',
+    conjugations: {mizen:['美味しかろう'],renyo_base:['美味しく','美味しかった'],renyo_onbin:[],shushi:['美味しい'],rentai:['美味しい'],katei:['美味しければ'],meirei:[]}
+  },
+  {
+    word: '考える', type: '下一段', meaning: '思考',
+    conjugations: {mizen:['考えない','考えよう'],renyo_base:['考えます'],renyo_onbin:['考えて','考えた'],shushi:['考える'],rentai:['考える'],katei:['考えれば'],meirei:['考えろ','考えよ']}
+  },
+  {
+    word: '心配する', type: 'サ變', meaning: '擔心',
+    conjugations: {mizen:['心配しない','心配しよう'],renyo_base:['心配します'],renyo_onbin:['心配して','心配した'],shushi:['心配する'],rentai:['心配する'],katei:['心配すれば'],meirei:['心配しろ','心配せよ']}
+  },
+  {
+    word: '持って来る', type: 'カ變', meaning: '帶來',
+    conjugations: {mizen:['持って来ない','持って来よう'],renyo_base:['持って来ます'],renyo_onbin:['持って来て','持って来た'],shushi:['持って来る'],rentai:['持って来る'],katei:['持って来れば'],meirei:['持って来い']}
+  },
+  {
+    word: '元気だ', type: 'な形容詞', meaning: '有精神的',
+    conjugations: {mizen:['元気だろう'],renyo_base:['元気で','元気に','元気だった'],renyo_onbin:[],shushi:['元気だ'],rentai:['元気な'],katei:['元気ならば'],meirei:[]}
+  },
+  {
+    word: 'テニスする', type: 'サ變', meaning: '打網球',
+    conjugations: {mizen:['テニスしない','テニスしよう'],renyo_base:['テニスします'],renyo_onbin:['テニスして','テニスした'],shushi:['テニスする'],rentai:['テニスする'],katei:['テニスすれば'],meirei:['テニスしろ','テニスせよ']}
+  },
+  {
+    word: '起きる', type: '上一段', meaning: '起床',
+    conjugations: {mizen:['起きない','起きよう'],renyo_base:['起きます'],renyo_onbin:['起きて','起きた'],shushi:['起きる'],rentai:['起きる'],katei:['起きれば'],meirei:['起きろ','起きよ']}
+  },
+  {
+    word: '切る', type: '五段', meaning: '切',
+    conjugations: {mizen:['切らない','切ろう'],renyo_base:['切ります'],renyo_onbin:['切って','切った'],shushi:['切る'],rentai:['切る'],katei:['切れば'],meirei:['切れ']}
+  },
+  {
+    word: '捨てる', type: '下一段', meaning: '丟棄',
+    conjugations: {mizen:['捨てない','捨てよう'],renyo_base:['捨てます'],renyo_onbin:['捨てて','捨てた'],shushi:['捨てる'],rentai:['捨てる'],katei:['捨てれば'],meirei:['捨てろ','捨てよ']}
+  },
+  {
+    word: '曲がる', type: '五段', meaning: '轉彎',
+    conjugations: {mizen:['曲がらない','曲がろう'],renyo_base:['曲がります'],renyo_onbin:['曲がって','曲がった'],shushi:['曲がる'],rentai:['曲がる'],katei:['曲がれば'],meirei:['曲がれ']}
+  },
+  {
+    word: '持つ', type: '五段', meaning: '拿',
+    conjugations: {mizen:['持たない','持とう'],renyo_base:['持ちます'],renyo_onbin:['持って','持った'],shushi:['持つ'],rentai:['持つ'],katei:['持てば'],meirei:['持て']}
+  },
+  {
+    word: '弾く', type: '五段', meaning: '彈奏',
+    conjugations: {mizen:['弾かない','弾こう'],renyo_base:['弾きます'],renyo_onbin:['弾いて','弾いた'],shushi:['弾く'],rentai:['弾く'],katei:['弾けば'],meirei:['弾け']}
+  },
+  {
+    word: '手伝う', type: '五段', meaning: '幫忙',
+    conjugations: {mizen:['手伝わない','手伝おう'],renyo_base:['手伝います'],renyo_onbin:['手伝って','手伝った'],shushi:['手伝う'],rentai:['手伝う'],katei:['手伝えば'],meirei:['手伝え']}
+  },
+  {
+    word: '調べる', type: '下一段', meaning: '調查',
+    conjugations: {mizen:['調べない','調べよう'],renyo_base:['調べます'],renyo_onbin:['調べて','調べた'],shushi:['調べる'],rentai:['調べる'],katei:['調べれば'],meirei:['調べろ','調べよ']}
+  }];
+
 export { KANJI_DICT, KANJI_KEYS, KANJI_REGEX, QUIZ_DATA, CHAPTERS, PRACTICE_TYPES, API_MODELS };
