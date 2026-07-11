@@ -28,6 +28,8 @@ import VerbDictPage from './VerbDictPage.jsx';
 import AiQuizPage from './AiQuizPage.jsx';
 import SearchPage from './SearchPage.jsx';
 
+const SEARCH_EMBEDDING_MODEL = 'Xenova/bge-m3';
+
 // API key will be managed via state and localStorage in App component
 
 const renderWithFurigana = (text, isHint = false) => {
@@ -170,7 +172,7 @@ export default function App() {
     if (screen === 'search' && !searchExtractor && !isExtractorLoading) {
       setIsExtractorLoading(true);
       env.allowLocalModels = false;
-      pipeline('feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2').then(extractor => {
+      pipeline('feature-extraction', SEARCH_EMBEDDING_MODEL).then(extractor => {
         setSearchExtractor(() => extractor);
         setIsExtractorLoading(false);
       }).catch(err => {

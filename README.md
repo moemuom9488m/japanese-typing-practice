@@ -35,7 +35,7 @@
    ```powershell
    python scripts/generate_embeddings.py
    ```
-   這會自動下載並使用 `MiniLM-L12-v2` 模型將 `raw_data.json` 轉為 `quiz_with_embeddings.json`。
+   這會自動下載並使用 `BAAI/bge-m3` 模型將 `scripts/raw_data.json` 轉為 `public/quiz_with_embeddings.json`。
 3. **完成**：重新啟動或重新整理網頁即可享有最新的語意搜尋功能！
 
 ### 3. 動詞變化特訓與雙重驗證引擎

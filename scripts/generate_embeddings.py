@@ -10,8 +10,8 @@ def main():
     if device == "cuda":
         print(f"顯示卡型號: {torch.cuda.get_device_name(0)}")
         
-    # 2. 載入與前端對應的模型
-    model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    # 2. 載入 BGE 多語向量模型（支援中日文）
+    model_name = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
     print(f"正在載入模型 ({model_name})...")
     model = SentenceTransformer(model_name, device=device)
     
@@ -28,27 +28,32 @@ def main():
     
     # 4. 批次計算
     processed_data = []
-    
+    feature_texts = []
+
     for item in quiz_data:
-        # 將日文 (ja 陣列通常只有一個元素，或取字串) 與中文 (zh) 組合
         ja_text = item.get("ja", [])
         if isinstance(ja_text, list):
             ja_text = " ".join(ja_text)
-        
+
         zh_text = item.get("zh", "")
-        
-        # 組合成特徵字串
         feature_text = f"{ja_text} {zh_text}".strip()
-        
-        # 計算向量
-        embedding = model.encode(feature_text, convert_to_tensor=False).tolist()
-        
+        feature_texts.append(feature_text)
+
+    embeddings = model.encode(
+        feature_texts,
+        batch_size=64,
+        convert_to_tensor=False,
+        normalize_embeddings=True,
+        show_progress_bar=True,
+    )
+
+    for item, embedding in zip(quiz_data, embeddings):
         updated_item = item.copy()
-        updated_item["embedding"] = embedding
+        updated_item["embedding"] = embedding.tolist()
         processed_data.append(updated_item)
-        
-    # 5. 匯出至 src/data/quiz_with_embeddings.json
-    output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "data", "quiz_with_embeddings.json")
+
+    # 5. 匯出至 public/quiz_with_embeddings.json（前端執行期載入路徑）
+    output_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "public", "quiz_with_embeddings.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(processed_data, f, ensure_ascii=False, indent=2)
         
